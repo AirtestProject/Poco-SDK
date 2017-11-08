@@ -35,13 +35,13 @@ namespace Poco
 			Bounds bounds = NGUIMath.CalculateAbsoluteWidgetBounds (gameObject.transform);
 			Rect rect = BoundsToScreenSpace (bounds);
 			Vector2 objectPos = WorldToGUIPoint (bounds.center);
-			List<string> components = GameObjectAllComponents ();
 			switch (attrName) {
 				case "name":
 					return gameObject.name;
 				case "type":
 					return gameObject.GetType ().Name;
 				case "visible":
+					List<string> components = GameObjectAllComponents ();
 					return GameObjectVisible (components);
 				case "pos":
 					return GameObjectPosInScreen (objectPos);
