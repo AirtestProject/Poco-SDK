@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
@@ -32,8 +32,37 @@ namespace Poco
 
 		public override object getAttr (string attrName)
 		{
-			Dictionary<string, object> payload = enumerateAttrs ();
-			return payload.ContainsKey (attrName) ? payload [attrName] : null;
+			Renderer renderer = gameObject.GetComponent<Renderer> ();
+			RectTransform rectTransform = gameObject.GetComponent<RectTransform> ();
+			Rect rect = GameObjectRect (renderer, rectTransform);
+			Vector2 objectPos = renderer ? WorldToGUIPoint (renderer.bounds.center) : Vector2.zero;
+			List<string> components = GameObjectAllComponents ();
+			switch (attrName) {
+				case "name":
+					return gameObject.name;
+				case "type":
+					return gameObject.GetType ().Name;
+				case "visible":
+					return GameObjectVisible (renderer, components);
+				case "pos":
+					return GameObjectPosInScreen (objectPos, renderer, rectTransform, rect);
+				case "size":
+					return GameObjectSizeInScreen (rect);
+				case "scale":
+					return new List<float> (){ 1.0f, 1.0f };
+				case "anchorPoint":
+					return GameObjectAnchorInScreen (renderer, rect, objectPos);
+				case "zOrders":
+					return GameObjectzOrders ();
+				case "clickable":
+					return GameObjectClickable (components);
+				case "text":
+					return GameObjectText ();
+				case "components":
+					return components;
+				default:
+					return null;
+			}
 		}
 
 		public override Dictionary<string, object> enumerateAttrs ()
