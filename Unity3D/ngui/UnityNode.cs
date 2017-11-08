@@ -39,43 +39,50 @@ namespace Poco
 		public override Dictionary<string, object> enumerateAttrs ()
 		{
 			Bounds bounds = NGUIMath.CalculateAbsoluteWidgetBounds (gameObject.transform);
-			Rect rect = GetRectInScreen (bounds);
+			Rect rect = BoundsToScreenSpace (bounds);
 			Vector2 objectPos = WorldToGUIPoint (bounds.center);
+			List<string> components = GameObjectAllComponents ();
 			Dictionary<string, object> payload = new Dictionary<string, object> () {
 				{ "name", gameObject.name },
 				{ "type", gameObject.GetType ().Name },
-				{ "visible", GameObjectVisible () },
-				{ "pos", GetPosInScreen (objectPos) },
-				{ "size", GetSizeInScreen (rect) },
+				{ "visible", GameObjectVisible (components) },
+				{ "pos", GameObjectPosInScreen (objectPos) },
+				{ "size", GameObjectSizeInScreen (rect) },
 				{ "scale", new List<float> (){ 1.0f, 1.0f } },
-				{ "anchorPoint", GetAnchorInScreen (rect, objectPos) },
-				{ "zOrders", GetzOrders () },
+				{ "anchorPoint", GameObjectAnchorInScreen (rect, objectPos) },
+				{ "zOrders", GameObjectzOrders () },
 				{ "clickable", GameObjectClickable () },
 				{ "text", GameObjectText () },
-				{ "components", GetAllComponents () }
+				{ "components", components }
 			};
 			return payload;
 		}
 
-		public bool GameObjectVisible ()
+		public bool GameObjectVisible (List<string> components)
 		{
-			return gameObject.activeInHierarchy ? true : false;
+			if (gameObject.activeInHierarchy) {
+				bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
+				bool particle = components.Contains ("ParticleSystem") && components.Contains ("ParticleSystemRenderer");
+				return mesh || particle ? false : true;
+			} else {
+				return false;
+			}
 		}
 
 		public bool GameObjectClickable ()
 		{
-			UIButton b = gameObject.GetComponent<UIButton> ();
-			BoxCollider bc = gameObject.GetComponent<BoxCollider> ();
-			return b && b.isEnabled && bc ? true : false;
+			UIButton button = gameObject.GetComponent<UIButton> ();
+			BoxCollider boxCollider = gameObject.GetComponent<BoxCollider> ();
+			return button && button.isEnabled && boxCollider ? true : false;
 		}
 
 		public string GameObjectText ()
 		{
-			UILabel t = gameObject.GetComponent<UILabel> ();
-			return t ? t.text : null;
+			UILabel text = gameObject.GetComponent<UILabel> ();
+			return text ? text.text : null;
 		}
 
-		public List<string> GetAllComponents ()
+		public List<string> GameObjectAllComponents ()
 		{
 			List<string> components = new List<string> ();
 			Component[] allComponents = gameObject.GetComponents<Component> ();
@@ -85,7 +92,7 @@ namespace Poco
 			return components;
 		}
 
-		public Dictionary<string, float> GetzOrders ()
+		public Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
 			if (UICamera.currentCamera != null) {
@@ -98,19 +105,19 @@ namespace Poco
 			return zOrders;
 		}
 
-		public static float[] GetPosInScreen (Vector2 objectPos)
+		public static float[] GameObjectPosInScreen (Vector2 objectPos)
 		{
 			float[] pos = { objectPos.x / (float)Screen.width, objectPos.y / (float)Screen.height };
 			return pos;
 		}
 
-		public static float[] GetSizeInScreen (Rect rect)
+		public static float[] GameObjectSizeInScreen (Rect rect)
 		{
 			float[] size = { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
 			return size;
 		}
 
-		public static float[] GetAnchorInScreen (Rect rect, Vector2 objectPos)
+		public static float[] GameObjectAnchorInScreen (Rect rect, Vector2 objectPos)
 		{
 			float[] anchor = { (objectPos.x - rect.xMin) / rect.width, (objectPos.y - rect.yMin) / rect.height };
 			if (Double.IsNaN (anchor [0]) || Double.IsNaN (anchor [1])) {
@@ -119,7 +126,7 @@ namespace Poco
 			return anchor;
 		}
 
-		public Rect GetRectInScreen (Bounds bounds)
+		public Rect BoundsToScreenSpace  (Bounds bounds)
 		{
 			Vector3 cen;
 			Vector3 ext;
