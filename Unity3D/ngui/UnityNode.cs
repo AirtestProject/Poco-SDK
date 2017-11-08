@@ -52,7 +52,6 @@ namespace Poco
 				{ "zOrders", GetzOrders () },
 				{ "clickable", GameObjectClickable () },
 				{ "text", GameObjectText () },
-				{ "instanceID", gameObject.GetInstanceID () },
 				{ "components", GetAllComponents () }
 			};
 			return payload;
