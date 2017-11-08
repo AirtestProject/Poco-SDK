@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -83,9 +83,7 @@ public class PocoManager : MonoBehaviour
 			foreach (TcpClientState client in toProcess) {
 				List<string> msgs = client.Prot.swap_msgs ();
 				msgs.ForEach (delegate(string msg) {
-					Debug.Log (msg);
 					string response = rpc.HandleMessage (msg);
-					Debug.Log (response);
 					byte[] bytes = prot.pack (response);
 					server.Send (client.TcpClient, bytes);
 				});
@@ -111,21 +109,16 @@ public class RPCParser
 		var data = Json.Deserialize (json) as Dictionary<string,object>;
 		if (data.ContainsKey ("method")) {
 			string method = data ["method"].ToString ();
-			Debug.Log ("method:" + method);
 			List<object> param = null;
 			if (data.ContainsKey ("params")) {
 				param = data ["params"] as List<object>;              
 			}
-
-			Debug.Log ("param:" + param);
 	
 			object idAction = null;
 			if (data.ContainsKey ("id")) {
 				// if it have id, it is a request
 				idAction = data ["id"];   
 			}
-
-			Debug.Log ("idAction:" + idAction);
 
 			string response = null;
 			object result = null;

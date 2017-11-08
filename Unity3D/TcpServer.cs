@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Net;
@@ -43,7 +43,6 @@ namespace TcpServer
 				if (buf.Length >= data_size + HEADER_SIZE) {
 					byte[] data_body = Slice (buf, HEADER_SIZE, buf.Length);
 					string content = System.Text.Encoding.Default.GetString (data_body);
-					Debug.Log ("got content:" + content);
 					msgs.Add (content);
 					buf = Slice (buf, data_size + HEADER_SIZE, buf.Length);
 				} else {
@@ -69,7 +68,6 @@ namespace TcpServer
 			}
 			byte[] body = System.Text.Encoding.Default.GetBytes (content);
 			byte[] ret = Combine (size, body);
-			Console.WriteLine (BitConverter.ToString (ret));
 			return ret;
 		}
 
