@@ -8,6 +8,27 @@ namespace Poco
 {
 	public class UnityNode: AbstractNode
 	{
+		public static Dictionary<string, string> TypeNames = new Dictionary<string, string> () {
+			{"Text", "Text"},
+			{"Gradient Text", "Gradient.Text"}, 
+			{"Image", "Image"}, 
+			{"Raw Image", "Raw.Image"},
+			{"Mask", "Mask"},
+			{"2D Rect Mask", "2D-Rect.Mask"},
+			{"Button", "Button"},
+			{"Input Field", "InputField"},
+			{"Toggle", "Toggle"},
+			{"Toggle Group", "ToggleGroup"},
+			{"Slider", "Slider"},
+			{"ScrollBar", "ScrollBar"},
+			{"DropDown", "DropDown"},
+			{"Scroll Rect", "ScrollRect"},
+			{"Selectable", "Selectable"},
+			{"Camera", "Camera"},
+			{"RectTransform", "Node"},
+		};
+		public static string DefaultTypeName = "GameObject";
+
 		private GameObject gameObject;
 
 		public UnityNode (GameObject obj)
@@ -34,6 +55,7 @@ namespace Poco
 		{
 			Renderer renderer = gameObject.GetComponent<Renderer> ();
 			RectTransform rectTransform = gameObject.GetComponent<RectTransform> ();
+			
 			Rect rect = GameObjectRect (renderer, rectTransform);
 			Vector2 objectPos = renderer ? WorldToGUIPoint (renderer.bounds.center) : Vector2.zero;
 			List<string> components = GameObjectAllComponents ();
@@ -41,7 +63,7 @@ namespace Poco
 				case "name":
 					return gameObject.name;
 				case "type":
-					return gameObject.GetType ().Name;
+					return GuessObjectTypeFromComponentNames(components);
 				case "visible":
 					return GameObjectVisible (renderer, components);
 				case "pos":
@@ -74,11 +96,11 @@ namespace Poco
 			List<string> components = GameObjectAllComponents ();
 			Dictionary<string, object> payload = new Dictionary<string, object> () {
 				{ "name", gameObject.name },
-				{ "type", gameObject.GetType ().Name },
+				{ "type", GuessObjectTypeFromComponentNames(components) },
 				{ "visible", GameObjectVisible (renderer, components) },
 				{ "pos", GameObjectPosInScreen (objectPos, renderer, rectTransform, rect) },
 				{ "size", GameObjectSizeInScreen (rect) },
-				{ "scale", new List<float> (){ 1.0f, 1.0f } },
+				{ "scale", new float[] { 1.0f, 1.0f } },
 				{ "anchorPoint", GameObjectAnchorInScreen (renderer, rect, objectPos) },
 				{ "zOrders", GameObjectzOrders () },
 				{ "clickable", GameObjectClickable (components) },
@@ -86,6 +108,18 @@ namespace Poco
 				{ "components", components }
 			};
 			return payload;
+		}
+
+		public string GuessObjectTypeFromComponentNames (List<string> componentNames) 
+		{
+			var cns = new List<string> (componentNames);
+			cns.Reverse ();
+			foreach (string name in cns) {
+				if (TypeNames.ContainsKey(name)) {
+					return TypeNames[name];
+				}
+			}
+			return DefaultTypeName;
 		}
 
 		public bool GameObjectVisible (Renderer renderer, List<string> components)

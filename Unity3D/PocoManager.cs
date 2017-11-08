@@ -6,13 +6,17 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
 using System;
 using MiniJSON;
 using TcpServer;
 using Poco;
 
+using Debug = UnityEngine.Debug;
+
 public class PocoManager : MonoBehaviour
 {
+	public int port = 5001;
 	private bool mRunning;
 	public AsyncTcpServer server = null;
 	private RPCParser rpc = null;
@@ -21,6 +25,13 @@ public class PocoManager : MonoBehaviour
 	private List<TcpClientState> inbox = new List<TcpClientState> ();
 	private object Lock = new object ();
 
+	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
+		{"dump", 0},
+		{"handleRpcRequest", 0},
+		{"packRpcResponse", 0},
+		{"sendRpcResponse", 0},
+	};
+
 	void Awake ()
 	{
 		prot = new SimpleProtocolFilter ();
@@ -28,10 +39,11 @@ public class PocoManager : MonoBehaviour
 		rpc.addRpcMethod ("Add", Add);
 		rpc.addRpcMethod ("Screen", Screen);
 		rpc.addRpcMethod ("Dump", Dump);
+		rpc.addRpcMethod ("GetDebugProfilingData", GetDebugProfilingData);
 
 		mRunning = true;
 
-		server = new AsyncTcpServer (5001);
+		server = new AsyncTcpServer (port);
 		server.Encoding = Encoding.UTF8;
 		server.DatagramReceived += 
 			new EventHandler<TcpDatagramReceivedEventArgs<byte[]>> (server_Received);
@@ -57,7 +69,12 @@ public class PocoManager : MonoBehaviour
 
 	private object Dump (List<object> param)
 	{
-		return dumper.dumpHierarchy ();
+		var sw = new Stopwatch ();
+		sw.Start ();
+		var h = dumper.dumpHierarchy ();
+		var t1 = sw.ElapsedMilliseconds;
+		debugProfilingData["dump"] = t1;
+		return h;
 	}
 
 	static object Screen (List<object> param)
@@ -72,6 +89,11 @@ public class PocoManager : MonoBehaviour
 		server.Stop ();
 	}
 
+	private object GetDebugProfilingData (List<object> param)
+	{
+		return debugProfilingData;
+	}
+
 	void Update ()
 	{
 		List<TcpClientState> toProcess;
@@ -83,9 +105,19 @@ public class PocoManager : MonoBehaviour
 			foreach (TcpClientState client in toProcess) {
 				List<string> msgs = client.Prot.swap_msgs ();
 				msgs.ForEach (delegate(string msg) {
+					var sw = new Stopwatch ();
+					sw.Start ();
+					var t0 = sw.ElapsedMilliseconds;
 					string response = rpc.HandleMessage (msg);
+					var t1 = sw.ElapsedMilliseconds;
 					byte[] bytes = prot.pack (response);
+					var t2 = sw.ElapsedMilliseconds;
 					server.Send (client.TcpClient, bytes);
+					var t3 = sw.ElapsedMilliseconds;
+					debugProfilingData["handleRpcRequest"] = t1 - t0;
+					debugProfilingData["packRpcResponse"] = t2 - t1;
+					debugProfilingData["sendRpcResponse"] = t3 - t2;
+					Debug.Log (debugProfilingData);
 				});
 			}
 		}

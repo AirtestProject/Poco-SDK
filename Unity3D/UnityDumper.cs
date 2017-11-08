@@ -10,23 +10,24 @@ namespace Poco
 		{
 			return new RootNode ();
 		}
-
-		public new List<float> getPortSize ()
-		{
-			return new List<float>{ (float)Screen.width, (float)Screen.height };
-		}
 	}
 
 	public class RootNode: AbstractNode
 	{
-		public override List<AbstractNode> getChildren () //<Modified> 
+		private List<AbstractNode> children = null;
+
+		public RootNode()
 		{
-			List<AbstractNode> children = new List<AbstractNode> ();
+			children =  new List<AbstractNode> ();
 			foreach (GameObject obj in Transform.FindObjectsOfType(typeof(GameObject))) {
 				if (obj.transform.parent == null) {
 					children.Add (new UnityNode (obj));
 				}
 			}
+		}
+
+		public override List<AbstractNode> getChildren () //<Modified> 
+		{
 			return children;
 		}
 	}
