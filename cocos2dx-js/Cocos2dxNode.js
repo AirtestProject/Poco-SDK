@@ -1,6 +1,6 @@
 // var cc = cc
 
-var AbstractNode = hunter.require('support.poco.sdk.AbstractNode')
+var AbstractNode = require('./sdk/AbstractNode')
 
 var Node = function (node, screenWidth, screenHeight) {
     AbstractNode.call(this)

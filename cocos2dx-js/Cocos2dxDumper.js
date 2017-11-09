@@ -1,7 +1,7 @@
 // var cc = cc
 
-var AbstractDumper = hunter.require('support.poco.sdk.AbstractDumper')
-var Node = hunter.require('support.poco.cocos2dx.Node')
+var AbstractDumper = hunter.require('./sdk/AbstractDumper')
+var Node = hunter.require('./Cocos2dxNode')
 
 var Dumper = function () {
     AbstractDumper.call(this)

@@ -1,4 +1,4 @@
-var DefaultMatcher = hunter.require('support.poco.sdk.DefaultMatcher')
+var DefaultMatcher = require('./DefaultMatcher')
 
 var ISelector = function () {
 }
