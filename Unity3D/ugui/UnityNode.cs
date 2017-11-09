@@ -12,17 +12,17 @@ namespace Poco
 			{"Text", "Text"},
 			{"Gradient Text", "Gradient.Text"}, 
 			{"Image", "Image"}, 
-			{"Raw Image", "Raw.Image"},
+			{"RawImage", "Raw.Image"},
 			{"Mask", "Mask"},
-			{"2D Rect Mask", "2D-Rect.Mask"},
+			{"2DRectMask", "2D-Rect.Mask"},
 			{"Button", "Button"},
-			{"Input Field", "InputField"},
+			{"InputField", "InputField"},
 			{"Toggle", "Toggle"},
 			{"Toggle Group", "ToggleGroup"},
 			{"Slider", "Slider"},
 			{"ScrollBar", "ScrollBar"},
 			{"DropDown", "DropDown"},
-			{"Scroll Rect", "ScrollRect"},
+			{"ScrollRect", "ScrollRect"},
 			{"Selectable", "Selectable"},
 			{"Camera", "Camera"},
 			{"RectTransform", "Node"},
@@ -82,6 +82,8 @@ namespace Poco
 					return GameObjectText ();
 				case "components":
 					return components;
+				case "texture":
+					return GetImageSourceTexture ();
 				default:
 					return null;
 			}
@@ -105,12 +107,13 @@ namespace Poco
 				{ "zOrders", GameObjectzOrders () },
 				{ "clickable", GameObjectClickable (components) },
 				{ "text", GameObjectText () },
-				{ "components", components }
+				{ "components", components },
+				{ "texture", GetImageSourceTexture () },
 			};
 			return payload;
 		}
 
-		public string GuessObjectTypeFromComponentNames (List<string> componentNames) 
+		private string GuessObjectTypeFromComponentNames (List<string> componentNames) 
 		{
 			var cns = new List<string> (componentNames);
 			cns.Reverse ();
@@ -122,7 +125,7 @@ namespace Poco
 			return DefaultTypeName;
 		}
 
-		public bool GameObjectVisible (Renderer renderer, List<string> components)
+		private bool GameObjectVisible (Renderer renderer, List<string> components)
 		{
 			if (gameObject.activeInHierarchy) {
 				bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
@@ -137,7 +140,7 @@ namespace Poco
 			}
 		}
 
-		public bool GameObjectClickable (List<string> components)
+		private bool GameObjectClickable (List<string> components)
 		{
 			Button button = gameObject.GetComponent<Button> ();
 			if (button) {
@@ -152,13 +155,13 @@ namespace Poco
 			return false;
 		}
 
-		public string GameObjectText ()
+		private string GameObjectText ()
 		{
 			Text text = gameObject.GetComponent<Text> ();
 			return text ? text.text : null;
 		}
 
-		public List<string> GameObjectAllComponents ()
+		private List<string> GameObjectAllComponents ()
 		{
 			List<string> components = new List<string> ();
 			Component[] allComponents = gameObject.GetComponents<Component> ();
@@ -168,7 +171,7 @@ namespace Poco
 			return components;
 		}
 
-		public Dictionary<string, float> GameObjectzOrders ()
+		private Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
 			if (Camera.main != null) {
@@ -181,7 +184,7 @@ namespace Poco
 			return zOrders;
 		}
 
-		public Rect GameObjectRect (Renderer renderer, RectTransform rectTransform)
+		private Rect GameObjectRect (Renderer renderer, RectTransform rectTransform)
 		{
 			Rect rect = new Rect (0, 0, 0, 0);
 			if (renderer) {
@@ -192,7 +195,7 @@ namespace Poco
 			return rect;
 		}
 
-		public float[] GameObjectPosInScreen (Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
+		private float[] GameObjectPosInScreen (Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
 		{
 			float[] pos = { 0f, 0f };
 
@@ -209,14 +212,14 @@ namespace Poco
 			return pos;
 		}
 
-		public float[] GameObjectSizeInScreen (Rect rect)
+		private float[] GameObjectSizeInScreen (Rect rect)
 		{
 			float[] size = { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
 			;
 			return size;
 		}
 
-		public float[] GameObjectAnchorInScreen (Renderer renderer, Rect rect, Vector3 objectPos)
+		private float[] GameObjectAnchorInScreen (Renderer renderer, Rect rect, Vector3 objectPos)
 		{
 			float[] anchor = { 0.5f, 0.5f };
 
@@ -231,14 +234,34 @@ namespace Poco
 			return anchor;
 		}
 
-		public static Vector2 WorldToGUIPoint (Vector3 world)
+		private string GetImageSourceTexture ()
+		{
+			var cImage = gameObject.GetComponent<Image> ();
+			if (cImage != null && cImage.sprite != null) {
+				return cImage.sprite.name;
+			}
+
+			var cRawImage = gameObject.GetComponent<RawImage> ();
+			if (cRawImage != null && cRawImage.texture != null) {
+				return cRawImage.texture.name;
+			}
+
+			var cSpriteRenderer = gameObject.GetComponent<SpriteRenderer> ();
+			if (cSpriteRenderer != null && cSpriteRenderer.sprite != null) {
+				return cSpriteRenderer.sprite.name;
+			}
+
+			return null;
+		}
+
+		protected static Vector2 WorldToGUIPoint (Vector3 world)
 		{
 			Vector2 screenPoint = Camera.main.WorldToScreenPoint (world);
 			screenPoint.y = (float)Screen.height - screenPoint.y;
 			return screenPoint;
 		}
 
-		public static Rect RendererToScreenSpace (Renderer renderer)
+		protected static Rect RendererToScreenSpace (Renderer renderer)
 		{
 			Vector3 cen = renderer.bounds.center;
 			Vector3 ext = renderer.bounds.extents;
@@ -261,7 +284,7 @@ namespace Poco
 			return new Rect (min.x, min.y, max.x - min.x, max.y - min.y);
 		}
 
-		public static Rect RectTransformToScreenSpace (RectTransform rectTransform)
+		protected static Rect RectTransformToScreenSpace (RectTransform rectTransform)
 		{
 			Vector2 size = Vector2.Scale (rectTransform.rect.size, rectTransform.lossyScale);
 			Rect rect = new Rect (rectTransform.position.x, Screen.height - rectTransform.position.y, size.x, size.y);

@@ -27,17 +27,22 @@ public class PocoManager : MonoBehaviour
 
 	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
 		{"dump", 0},
+		{"screenshot", 0},
 		{"handleRpcRequest", 0},
 		{"packRpcResponse", 0},
 		{"sendRpcResponse", 0},
 	};
+
+	class RPC: Attribute {
+	}
 
 	void Awake ()
 	{
 		prot = new SimpleProtocolFilter ();
 		rpc = new RPCParser ();
 		rpc.addRpcMethod ("Add", Add);
-		rpc.addRpcMethod ("Screen", Screen);
+		rpc.addRpcMethod ("Screenshot", Screenshot);
+		rpc.addRpcMethod ("GetScreenSize", GetScreenSize);
 		rpc.addRpcMethod ("Dump", Dump);
 		rpc.addRpcMethod ("GetDebugProfilingData", GetDebugProfilingData);
 
@@ -60,6 +65,7 @@ public class PocoManager : MonoBehaviour
 		}
 	}
 
+	[RPC]
 	static object Add (List<object> param)
 	{
 		int first = Convert.ToInt32 (param [0]);
@@ -67,20 +73,33 @@ public class PocoManager : MonoBehaviour
 		return first + second;
 	}
 
+	[RPC]
 	private object Dump (List<object> param)
 	{
 		var sw = new Stopwatch ();
 		sw.Start ();
 		var h = dumper.dumpHierarchy ();
-		var t1 = sw.ElapsedMilliseconds;
-		debugProfilingData["dump"] = t1;
+		debugProfilingData["dump"] = sw.ElapsedMilliseconds;
 		return h;
 	}
 
-	static object Screen (List<object> param)
+	[RPC]
+	private object Screenshot (List<object> param)
 	{
-		Application.CaptureScreenshot ("~/Desktop/screen.png");
-		return true;
+		var sw = new Stopwatch ();
+		sw.Start ();
+		var dst = Application.dataPath + "/screen.png";
+		Application.CaptureScreenshot (dst);
+		byte[] fileBytes = File.ReadAllBytes(dst);
+		var b64img = Convert.ToBase64String (fileBytes);
+		debugProfilingData["screenshot"] = sw.ElapsedMilliseconds;
+		return new object[] { b64img, "png" };
+	}
+
+	[RPC]
+	private object GetScreenSize (List<object> param)
+	{
+		return new float[] { Screen.width, Screen.height };
 	}
 
 	public void stopListening ()
@@ -89,6 +108,7 @@ public class PocoManager : MonoBehaviour
 		server.Stop ();
 	}
 
+	[RPC]
 	private object GetDebugProfilingData (List<object> param)
 	{
 		return debugProfilingData;
