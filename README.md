@@ -1,7 +1,9 @@
 # poco-sdk
 
-This repo collects all implememented versions of poco-sdk.
+This repo contains all implememented poco-sdk, for most popular game engines.
 
-Each directory holds the specific poco-sdk. You can simply copy the corresponding whole sub-directory to your project and import the module/class in your game scripts.
+Each directory is an engine specific poco-sdk implementation. You can simply copy the corresponding directory to your project and initialize the module/class from your game scripts.
 
-See [Integration Guide]() for more details.
+`sdk` directory contains the unimplemented language specific base sdk, which can be used to implement an poco-sdk for other game engines
+
+For more detailed integration steps, please refer to [Integration Guide]().
