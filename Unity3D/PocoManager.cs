@@ -88,12 +88,14 @@ public class PocoManager : MonoBehaviour
 	{
 		var sw = new Stopwatch ();
 		sw.Start ();
-		var dst = Application.dataPath + "/screen.png";
-		Application.CaptureScreenshot (dst);
-		byte[] fileBytes = File.ReadAllBytes(dst);
+
+		var tex = new Texture2D (Screen.width, Screen.height, TextureFormat.RGB24, false);
+		tex.ReadPixels (new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+		tex.Apply (false);
+		byte[] fileBytes = tex.EncodeToJPG (80);
 		var b64img = Convert.ToBase64String (fileBytes);
 		debugProfilingData["screenshot"] = sw.ElapsedMilliseconds;
-		return new object[] { b64img, "png" };
+		return new object[] { b64img, "jpg" };
 	}
 
 	[RPC]

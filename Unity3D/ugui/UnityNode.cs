@@ -110,6 +110,11 @@ namespace Poco
 				{ "components", components },
 				{ "texture", GetImageSourceTexture () },
 			};
+
+
+			if (gameObject.tag != null && !gameObject.tag.Equals("Untagged")) {
+				payload.Add ("tag", gameObject.tag);
+			}
 			return payload;
 		}
 
