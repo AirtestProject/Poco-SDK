@@ -132,9 +132,10 @@ namespace Poco
 		private bool GameObjectVisible (List<string> components)
 		{
 			if (gameObject.activeInHierarchy) {
+				bool drawcall = components.Contains ("UIDrawCall");
 				bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
 				bool particle = components.Contains ("ParticleSystem") && components.Contains ("ParticleSystemRenderer");
-				return mesh || particle ? false : true;
+				return drawcall || mesh || particle ? false : true;
 			} else {
 				return false;
 			}
