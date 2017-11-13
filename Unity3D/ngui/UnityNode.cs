@@ -29,6 +29,8 @@ namespace Poco
 			{ "UITexture", "UITexture" },
 			{ "UITooltip", "UITooltip" },
 			{ "UIViewport", "UIViewport" },
+			{ "Camera", "Camera" },
+			{ "Transform", "Node" },
 		};
 		public static string DefaultTypeName = "GameObject";
 		private GameObject gameObject;
