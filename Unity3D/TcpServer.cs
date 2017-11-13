@@ -77,7 +77,6 @@ namespace TcpServer
 			Buffer.BlockCopy (first, 0, ret, 0, first.Length);
 			Buffer.BlockCopy (second, 0, ret, first.Length, second.Length);
 			return ret;
-			// return first.Concat(second);
 		}
 
 		public byte[] Slice (byte[] source, int start, int end)
@@ -86,7 +85,6 @@ namespace TcpServer
 			byte[] ret = new byte[length];
 			Array.Copy (source, start, ret, 0, length);
 			return ret;
-			// return source.Skip(start).Take(end - start);
 		}
 	}
 
