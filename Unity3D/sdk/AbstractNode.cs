@@ -40,11 +40,7 @@ namespace Poco
 				{ "anchorPoint", new List<float> (){ 0.5f, 0.5f } },
 				{ "zOrders", new Dictionary<string, object> (){ { "local", 0 }, { "global", 0 } } }
 			};
-			if (defaultAttrs.ContainsKey (attrName)) {
-				return defaultAttrs [attrName];
-			} else {
-				return null;
-			}
+			return defaultAttrs.ContainsKey (attrName) ? defaultAttrs [attrName] : null;
 		}
 
 		public virtual void setAttr (string attrName, object val)
