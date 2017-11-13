@@ -9,26 +9,25 @@ namespace Poco
 	public class UnityNode: AbstractNode
 	{
 		public static Dictionary<string, string> TypeNames = new Dictionary<string, string> () {
-			{"Text", "Text"},
-			{"Gradient Text", "Gradient.Text"}, 
-			{"Image", "Image"}, 
-			{"RawImage", "Raw.Image"},
-			{"Mask", "Mask"},
-			{"2DRectMask", "2D-Rect.Mask"},
-			{"Button", "Button"},
-			{"InputField", "InputField"},
-			{"Toggle", "Toggle"},
-			{"Toggle Group", "ToggleGroup"},
-			{"Slider", "Slider"},
-			{"ScrollBar", "ScrollBar"},
-			{"DropDown", "DropDown"},
-			{"ScrollRect", "ScrollRect"},
-			{"Selectable", "Selectable"},
-			{"Camera", "Camera"},
-			{"RectTransform", "Node"},
+			{ "Text", "Text" },
+			{ "Gradient Text", "Gradient.Text" }, 
+			{ "Image", "Image" }, 
+			{ "RawImage", "Raw.Image" },
+			{ "Mask", "Mask" },
+			{ "2DRectMask", "2D-Rect.Mask" },
+			{ "Button", "Button" },
+			{ "InputField", "InputField" },
+			{ "Toggle", "Toggle" },
+			{ "Toggle Group", "ToggleGroup" },
+			{ "Slider", "Slider" },
+			{ "ScrollBar", "ScrollBar" },
+			{ "DropDown", "DropDown" },
+			{ "ScrollRect", "ScrollRect" },
+			{ "Selectable", "Selectable" },
+			{ "Camera", "Camera" },
+			{ "RectTransform", "Node" },
 		};
 		public static string DefaultTypeName = "GameObject";
-
 		private GameObject gameObject;
 
 		public UnityNode (GameObject obj)
@@ -55,7 +54,6 @@ namespace Poco
 		{
 			Renderer renderer = gameObject.GetComponent<Renderer> ();
 			RectTransform rectTransform = gameObject.GetComponent<RectTransform> ();
-			
 			Rect rect = GameObjectRect (renderer, rectTransform);
 			Vector2 objectPos = renderer ? WorldToGUIPoint (renderer.bounds.center) : Vector2.zero;
 			List<string> components = GameObjectAllComponents ();
@@ -63,7 +61,7 @@ namespace Poco
 				case "name":
 					return gameObject.name;
 				case "type":
-					return GuessObjectTypeFromComponentNames(components);
+					return GuessObjectTypeFromComponentNames (components);
 				case "visible":
 					return GameObjectVisible (renderer, components);
 				case "pos":
@@ -84,6 +82,8 @@ namespace Poco
 					return components;
 				case "texture":
 					return GetImageSourceTexture ();
+				case "tag":
+					return GameObjectTag ();
 				default:
 					return null;
 			}
@@ -98,7 +98,7 @@ namespace Poco
 			List<string> components = GameObjectAllComponents ();
 			Dictionary<string, object> payload = new Dictionary<string, object> () {
 				{ "name", gameObject.name },
-				{ "type", GuessObjectTypeFromComponentNames(components) },
+				{ "type", GuessObjectTypeFromComponentNames (components) },
 				{ "visible", GameObjectVisible (renderer, components) },
 				{ "pos", GameObjectPosInScreen (objectPos, renderer, rectTransform, rect) },
 				{ "size", GameObjectSizeInScreen (rect) },
@@ -109,18 +109,14 @@ namespace Poco
 				{ "text", GameObjectText () },
 				{ "components", components },
 				{ "texture", GetImageSourceTexture () },
+				{ "tag", GameObjectTag () }
 			};
-
-
-			if (gameObject.tag != null && !gameObject.tag.Equals("Untagged")) {
-				payload.Add ("tag", gameObject.tag);
-			}
 			return payload;
 		}
 
-		private string GuessObjectTypeFromComponentNames (List<string> componentNames) 
+		private string GuessObjectTypeFromComponentNames (List<string> components) 
 		{
-			var cns = new List<string> (componentNames);
+			List<string> cns = components;
 			cns.Reverse ();
 			foreach (string name in cns) {
 				if (TypeNames.ContainsKey(name)) {
@@ -164,6 +160,11 @@ namespace Poco
 		{
 			Text text = gameObject.GetComponent<Text> ();
 			return text ? text.text : null;
+		}
+
+		private string GameObjectTag ()
+		{
+			return !gameObject.tag.Equals("Untagged") ? gameObject.tag : null;
 		}
 
 		private List<string> GameObjectAllComponents ()
@@ -220,7 +221,6 @@ namespace Poco
 		private float[] GameObjectSizeInScreen (Rect rect)
 		{
 			float[] size = { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
-			;
 			return size;
 		}
 
@@ -241,19 +241,19 @@ namespace Poco
 
 		private string GetImageSourceTexture ()
 		{
-			var cImage = gameObject.GetComponent<Image> ();
-			if (cImage != null && cImage.sprite != null) {
-				return cImage.sprite.name;
+			Image image = gameObject.GetComponent<Image> ();
+			if (image != null && image.sprite != null) {
+				return image.sprite.name;
 			}
 
-			var cRawImage = gameObject.GetComponent<RawImage> ();
-			if (cRawImage != null && cRawImage.texture != null) {
-				return cRawImage.texture.name;
+			RawImage rawImage = gameObject.GetComponent<RawImage> ();
+			if (rawImage != null && rawImage.texture != null) {
+				return rawImage.texture.name;
 			}
 
-			var cSpriteRenderer = gameObject.GetComponent<SpriteRenderer> ();
-			if (cSpriteRenderer != null && cSpriteRenderer.sprite != null) {
-				return cSpriteRenderer.sprite.name;
+			SpriteRenderer spriteRenderer = gameObject.GetComponent<SpriteRenderer> ();
+			if (spriteRenderer != null && spriteRenderer.sprite != null) {
+				return spriteRenderer.sprite.name;
 			}
 
 			return null;

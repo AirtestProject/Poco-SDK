@@ -8,6 +8,7 @@ namespace Poco
 {
 	public class UnityNode: AbstractNode
 	{
+		public static string DefaultTypeName = "GameObject";
 		private GameObject gameObject;
 
 		public UnityNode (GameObject obj)
@@ -59,6 +60,10 @@ namespace Poco
 					return GameObjectText ();
 				case "components":
 					return components;
+				case "texture":
+					return GetImageSourceTexture ();
+				case "tag":
+					return GameObjectTag ();
 				default:
 					return null;
 			}
@@ -81,12 +86,19 @@ namespace Poco
 				{ "zOrders", GameObjectzOrders () },
 				{ "clickable", GameObjectClickable () },
 				{ "text", GameObjectText () },
-				{ "components", components }
+				{ "components", components },
+				{ "texture", GetImageSourceTexture () },
+				{ "tag", GameObjectTag () }
 			};
 			return payload;
 		}
 
-		public bool GameObjectVisible (List<string> components)
+		private string GuessObjectTypeFromComponentNames (List<string> components) 
+		{
+			return DefaultTypeName;
+		}
+
+		private bool GameObjectVisible (List<string> components)
 		{
 			if (gameObject.activeInHierarchy) {
 				bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
@@ -97,20 +109,25 @@ namespace Poco
 			}
 		}
 
-		public bool GameObjectClickable ()
+		private bool GameObjectClickable ()
 		{
 			UIButton button = gameObject.GetComponent<UIButton> ();
 			BoxCollider boxCollider = gameObject.GetComponent<BoxCollider> ();
 			return button && button.isEnabled && boxCollider ? true : false;
 		}
 
-		public string GameObjectText ()
+		private string GameObjectText ()
 		{
 			UILabel text = gameObject.GetComponent<UILabel> ();
 			return text ? text.text : null;
 		}
 
-		public List<string> GameObjectAllComponents ()
+		private string GameObjectTag ()
+		{
+			return !gameObject.tag.Equals("Untagged") ? gameObject.tag : null;
+		}
+
+		private List<string> GameObjectAllComponents ()
 		{
 			List<string> components = new List<string> ();
 			Component[] allComponents = gameObject.GetComponents<Component> ();
@@ -120,7 +137,7 @@ namespace Poco
 			return components;
 		}
 
-		public Dictionary<string, float> GameObjectzOrders ()
+		private Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
 			if (UICamera.currentCamera != null) {
@@ -133,19 +150,19 @@ namespace Poco
 			return zOrders;
 		}
 
-		public static float[] GameObjectPosInScreen (Vector2 objectPos)
+		private float[] GameObjectPosInScreen (Vector2 objectPos)
 		{
 			float[] pos = { objectPos.x / (float)Screen.width, objectPos.y / (float)Screen.height };
 			return pos;
 		}
 
-		public static float[] GameObjectSizeInScreen (Rect rect)
+		private float[] GameObjectSizeInScreen (Rect rect)
 		{
 			float[] size = { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
 			return size;
 		}
 
-		public static float[] GameObjectAnchorInScreen (Rect rect, Vector2 objectPos)
+		private float[] GameObjectAnchorInScreen (Rect rect, Vector2 objectPos)
 		{
 			float[] anchor = { (objectPos.x - rect.xMin) / rect.width, (objectPos.y - rect.yMin) / rect.height };
 			if (Double.IsNaN (anchor [0]) || Double.IsNaN (anchor [1])) {
@@ -154,7 +171,12 @@ namespace Poco
 			return anchor;
 		}
 
-		public Rect BoundsToScreenSpace  (Bounds bounds)
+		private string GetImageSourceTexture ()
+		{
+			return null;
+		}
+
+		protected Rect BoundsToScreenSpace  (Bounds bounds)
 		{
 			Vector3 cen;
 			Vector3 ext;
@@ -180,7 +202,7 @@ namespace Poco
 			return new Rect (min.x, min.y, max.x - min.x, max.y - min.y);
 		}
 
-		public static Vector2 WorldToGUIPoint (Vector3 world)
+		protected static Vector2 WorldToGUIPoint (Vector3 world)
 		{
 			Vector2 screenPoint = UICamera.currentCamera.WorldToScreenPoint (world);
 			screenPoint.y = (float)Screen.height - screenPoint.y;
