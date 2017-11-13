@@ -8,6 +8,28 @@ namespace Poco
 {
 	public class UnityNode: AbstractNode
 	{
+		public static Dictionary<string, string> TypeNames = new Dictionary<string, string> () {
+			{ "UI2DSprite", "UI2DSprite" },
+			{ "UI2DSpriteAnimation", "UI2DSpriteAnimation" },
+			{ "UIAnchor", "UIAnchor" },
+			{ "UIAtlas", "UIAtlas" },
+			{ "UICamera", "UICamera" },
+			{ "UIFont", "UIFont" },
+			{ "UIInput", "UIInput" },
+			{ "UILabel", "UILabel" },
+			{ "UILocalize", "UILocalize" },
+			{ "UIOrthoCamera", "UIOrthoCamera" },
+			{ "UIPanel", "UIPanel" },
+			{ "UIRoot", "UIRoot" },
+			{ "UISprite", "UISprite" },
+			{ "UISpriteAnimation", "UISpriteAnimation" },
+			{ "UISpriteData", "UISpriteData" },
+			{ "UIStretch", "UIStretch" },
+			{ "UITextList", "UITextList" },
+			{ "UITexture", "UITexture" },
+			{ "UITooltip", "UITooltip" },
+			{ "UIViewport", "UIViewport" },
+		};
 		public static string DefaultTypeName = "GameObject";
 		private GameObject gameObject;
 
@@ -36,13 +58,13 @@ namespace Poco
 			Bounds bounds = NGUIMath.CalculateAbsoluteWidgetBounds (gameObject.transform);
 			Rect rect = BoundsToScreenSpace (bounds);
 			Vector2 objectPos = WorldToGUIPoint (bounds.center);
+			List<string> components = GameObjectAllComponents ();
 			switch (attrName) {
 				case "name":
 					return gameObject.name;
 				case "type":
-					return gameObject.GetType ().Name;
+					return GuessObjectTypeFromComponentNames (components);
 				case "visible":
-					List<string> components = GameObjectAllComponents ();
 					return GameObjectVisible (components);
 				case "pos":
 					return GameObjectPosInScreen (objectPos);
@@ -77,7 +99,7 @@ namespace Poco
 			List<string> components = GameObjectAllComponents ();
 			Dictionary<string, object> payload = new Dictionary<string, object> () {
 				{ "name", gameObject.name },
-				{ "type", gameObject.GetType ().Name },
+				{ "type", GuessObjectTypeFromComponentNames (components) },
 				{ "visible", GameObjectVisible (components) },
 				{ "pos", GameObjectPosInScreen (objectPos) },
 				{ "size", GameObjectSizeInScreen (rect) },
@@ -93,8 +115,15 @@ namespace Poco
 			return payload;
 		}
 
-		private string GuessObjectTypeFromComponentNames (List<string> components) 
+		private string GuessObjectTypeFromComponentNames (List<string> components)
 		{
+			List<string> cns = components;
+			cns.Reverse ();
+			foreach (string name in cns) {
+				if (TypeNames.ContainsKey(name)) {
+					return TypeNames[name];
+				}
+			}
 			return DefaultTypeName;
 		}
 
@@ -173,6 +202,16 @@ namespace Poco
 
 		private string GetImageSourceTexture ()
 		{
+			UISprite sprite = gameObject.GetComponent<UISprite> ();
+			if (sprite != null) {
+				return sprite.spriteName;
+			}
+
+			UITexture texture = gameObject.GetComponent<UITexture> ();
+			if (texture != null) {
+				return texture.mainTexture.name;
+			}
+
 			return null;
 		}
 
