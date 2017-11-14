@@ -196,9 +196,9 @@ namespace Poco
 		{
 			Vector3 cen;
 			Vector3 ext;
-			Renderer r = gameObject.GetComponent<Renderer> ();
-			cen = r ? r.bounds.center : bounds.center;
-			ext = r ? r.bounds.extents : bounds.extents;
+			Renderer renderer = gameObject.GetComponent<Renderer> ();
+			cen = renderer ? renderer.bounds.center : bounds.center;
+			ext = renderer ? renderer.bounds.extents : bounds.extents;
 			Vector2[] extentPoints = new Vector2[8] {
 				WorldToGUIPoint (new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z - ext.z)),
 				WorldToGUIPoint (new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z - ext.z)),
