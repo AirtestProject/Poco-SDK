@@ -32,8 +32,7 @@ namespace Poco
 
 			List<object> children = new List<object> ();
 			foreach (AbstractNode child in node.getChildren()) {
-				bool visible = payload.ContainsKey ("visible") ? (bool)payload ["visible"] : (bool)child.getAttr ("visible");
-				if (visible) {
+				if ((bool)child.getAttr ("visible")) {
 					children.Add (dumpHierarchyImpl (child));
 				}
 			}
