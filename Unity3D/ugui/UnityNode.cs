@@ -116,7 +116,7 @@ namespace Poco
 
 		private string GuessObjectTypeFromComponentNames (List<string> components) 
 		{
-			List<string> cns = components;
+			List<string> cns = new List<string> (components);
 			cns.Reverse ();
 			foreach (string name in cns) {
 				if (TypeNames.ContainsKey(name)) {

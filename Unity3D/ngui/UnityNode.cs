@@ -119,7 +119,7 @@ namespace Poco
 
 		private string GuessObjectTypeFromComponentNames (List<string> components)
 		{
-			List<string> cns = components;
+			List<string> cns = new List<string> (components);
 			cns.Reverse ();
 			foreach (string name in cns) {
 				if (TypeNames.ContainsKey(name)) {
@@ -218,7 +218,7 @@ namespace Poco
 			return null;
 		}
 
-		protected Rect BoundsToScreenSpace  (Bounds bounds)
+		protected Rect BoundsToScreenSpace (Bounds bounds)
 		{
 			Vector3 cen;
 			Vector3 ext;
