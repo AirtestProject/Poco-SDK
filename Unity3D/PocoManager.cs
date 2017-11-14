@@ -38,6 +38,8 @@ public class PocoManager : MonoBehaviour
 
 	void Awake ()
 	{
+		DontDestroyOnLoad (this);
+
 		prot = new SimpleProtocolFilter ();
 		rpc = new RPCParser ();
 		rpc.addRpcMethod ("Add", Add);
