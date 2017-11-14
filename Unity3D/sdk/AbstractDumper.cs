@@ -26,7 +26,7 @@ namespace Poco
 
 			Dictionary<string, object> payload = node.enumerateAttrs ();
 			Dictionary<string, object> result = new Dictionary<string, object> ();
-			string name = payload.ContainsKey ("name") ? (string)payload ["name"] : (string)node.getAttr ("name");
+			string name = (string)node.getAttr ("name");
 			result.Add ("name", name);
 			result.Add ("payload", payload);
 
