@@ -191,7 +191,7 @@ namespace Poco
 			}
 
 			UITexture texture = gameObject.GetComponent<UITexture> ();
-			if (texture != null) {
+			if (texture != null && texture.mainTexture != null) {
 				return texture.mainTexture.name;
 			}
 
