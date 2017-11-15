@@ -137,7 +137,13 @@ namespace Poco
 
 		private string GameObjectTag ()
 		{
-			return !gameObject.CompareTag ("Untagged") ? gameObject.tag : null;
+			string tag;
+			try {
+				tag = !gameObject.CompareTag ("Untagged") ? gameObject.tag : null;
+			} catch (UnityException e) {
+				tag = null;
+			}
+			return tag;
 		}
 
 		private List<string> GameObjectAllComponents ()
