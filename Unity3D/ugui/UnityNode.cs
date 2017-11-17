@@ -59,7 +59,13 @@ namespace Poco
 
 		public override Dictionary<string, object> enumerateAttrs ()
 		{
-			return payload;
+			Dictionary<string, object> ret = new Dictionary<string, object> ();
+			foreach (KeyValuePair<string, object>  p in payload) {
+				if (p.Value != null) {
+					ret.Add (p.Key, p.Value);
+				}
+			}
+			return ret;
 		}
 
 		private Dictionary<string, object> GetPayload ()
@@ -240,8 +246,11 @@ namespace Poco
 
 		protected static Vector2 WorldToGUIPoint (Vector3 world)
 		{
-			Vector2 screenPoint = Camera.main.WorldToScreenPoint (world);
-			screenPoint.y = (float)Screen.height - screenPoint.y;
+			Vector2 screenPoint = Vector2.zero;
+			if (Camera.main != null) {
+				screenPoint = Camera.main.WorldToScreenPoint (world);
+				screenPoint.y = (float)Screen.height - screenPoint.y;
+			}
 			return screenPoint;
 		}
 

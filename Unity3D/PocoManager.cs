@@ -8,9 +8,9 @@ using System.IO;
 using System.Text;
 using System.Diagnostics;
 using System;
-using MiniJSON;
 using TcpServer;
 using Poco;
+using Newtonsoft.Json;
 
 using Debug = UnityEngine.Debug;
 
@@ -25,15 +25,16 @@ public class PocoManager : MonoBehaviour
 	private List<TcpClientState> inbox = new List<TcpClientState> ();
 	private object Lock = new object ();
 
-	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
-		{"dump", 0},
-		{"screenshot", 0},
-		{"handleRpcRequest", 0},
-		{"packRpcResponse", 0},
-		{"sendRpcResponse", 0},
+	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long> () {
+		{ "dump", 0 },
+		{ "screenshot", 0 },
+		{ "handleRpcRequest", 0 },
+		{ "packRpcResponse", 0 },
+		{ "sendRpcResponse", 0 },
 	};
 
-	class RPC: Attribute {
+	class RPC: Attribute
+	{
 	}
 
 	void Awake ()
@@ -81,7 +82,7 @@ public class PocoManager : MonoBehaviour
 		var sw = new Stopwatch ();
 		sw.Start ();
 		var h = dumper.dumpHierarchy ();
-		debugProfilingData["dump"] = sw.ElapsedMilliseconds;
+		debugProfilingData ["dump"] = sw.ElapsedMilliseconds;
 		return h;
 	}
 
@@ -92,11 +93,11 @@ public class PocoManager : MonoBehaviour
 		sw.Start ();
 
 		var tex = new Texture2D (Screen.width, Screen.height, TextureFormat.RGB24, false);
-		tex.ReadPixels (new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+		tex.ReadPixels (new Rect (0, 0, Screen.width, Screen.height), 0, 0);
 		tex.Apply (false);
 		byte[] fileBytes = tex.EncodeToJPG (80);
 		var b64img = Convert.ToBase64String (fileBytes);
-		debugProfilingData["screenshot"] = sw.ElapsedMilliseconds;
+		debugProfilingData ["screenshot"] = sw.ElapsedMilliseconds;
 		return new object[] { b64img, "jpg" };
 	}
 
@@ -138,10 +139,8 @@ public class PocoManager : MonoBehaviour
 					var t2 = sw.ElapsedMilliseconds;
 					server.Send (client.TcpClient, bytes);
 					var t3 = sw.ElapsedMilliseconds;
-					debugProfilingData["handleRpcRequest"] = t1 - t0;
-					debugProfilingData["packRpcResponse"] = t2 - t1;
-					debugProfilingData["sendRpcResponse"] = t3 - t2;
-					Debug.Log (debugProfilingData);
+					debugProfilingData ["handleRpcRequest"] = t1 - t0;
+					debugProfilingData ["packRpcResponse"] = t2 - t1;
 				});
 			}
 		}
@@ -159,10 +158,13 @@ public class RPCParser
 	public delegate object RpcMethod (List<object>param);
 
 	protected Dictionary<string, RpcMethod> RPCHandler = new Dictionary<string, RpcMethod> ();
+	private JsonSerializerSettings settings = new JsonSerializerSettings () { 
+		StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
+	};
 
 	public string HandleMessage (string json)
 	{
-		var data = Json.Deserialize (json) as Dictionary<string,object>;
+		Dictionary<string,object> data = JsonConvert.DeserializeObject<Dictionary<string,object>> (json, settings);
 		if (data.ContainsKey ("method")) {
 			string method = data ["method"].ToString ();
 			List<object> param = null;
@@ -201,31 +203,33 @@ public class RPCParser
 	// Call a method in the server
 	public string formatRequest (string method, object idAction, List<object> param = null)
 	{
-		Dictionary<string,object> data = new Dictionary<string, object> ();
+		Dictionary<string, object> data = new Dictionary<string, object> ();
 		data ["jsonrpc"] = "2.0";
 		data ["method"] = method;
-		if (param != null)
-			data ["params"] = Json.Serialize (param);
+		if (param != null) {
+			data ["params"] = JsonConvert.SerializeObject (param, settings);
+		}
 		// if idAction is null, it is a notification
-		if (idAction != null)
+		if (idAction != null) {
 			data ["id"] = idAction;
-		return Json.Serialize (data);
+		}
+		return JsonConvert.SerializeObject (data, settings);
 	}
 
 	// Send a response from a request the server made to this client
 	public string formatResponse (object idAction, object result)
 	{
-		Dictionary<string,object> rpc = new Dictionary<string, object> ();
+		Dictionary<string, object> rpc = new Dictionary<string, object> ();
 		rpc ["jsonrpc"] = "2.0";
 		rpc ["id"] = idAction;
 		rpc ["result"] = result;
-		return Json.Serialize (rpc);
+		return JsonConvert.SerializeObject (rpc, settings);
 	}
 
 	// Send a error to the server from a request it made to this client
 	public string formatResponseError (object idAction, IDictionary<string,object> data, Exception e)
 	{
-		Dictionary<string,object> rpc = new Dictionary<string, object> ();
+		Dictionary<string, object> rpc = new Dictionary<string, object> ();
 		rpc ["jsonrpc"] = "2.0";
 		rpc ["id"] = idAction;
 
@@ -233,11 +237,12 @@ public class RPCParser
 		errorDefinition ["code"] = 1;
 		errorDefinition ["message"] = e.ToString ();
 
-		if (data != null)
+		if (data != null) {
 			errorDefinition ["data"] = data;
+		}
 
 		rpc ["error"] = errorDefinition;
-		return Json.Serialize (rpc);
+		return JsonConvert.SerializeObject (rpc, settings);
 	}
 
 	public void addRpcMethod (string name, RpcMethod method)
