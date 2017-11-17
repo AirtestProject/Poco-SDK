@@ -108,9 +108,10 @@ namespace Poco
 		private bool GameObjectVisible (Renderer renderer, List<string> components)
 		{
 			if (gameObject.activeInHierarchy) {
+				bool light = components.Contains ("Light");
 				bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
 				bool particle = components.Contains ("ParticleSystem") && components.Contains ("ParticleSystemRenderer");
-				if (mesh || particle) {
+				if (light || mesh || particle) {
 					return false;
 				} else {
 					return renderer ? renderer.isVisible : true;
