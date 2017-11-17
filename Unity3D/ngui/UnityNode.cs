@@ -59,7 +59,7 @@ namespace Poco
 
 		public override object getAttr (string attrName)
 		{
-			return payload.ContainsKey (attrName) ? payload[attrName] : null;
+			return payload.ContainsKey (attrName) ? payload [attrName] : null;
 		}
 
 		public override Dictionary<string, object> enumerateAttrs ()
@@ -102,8 +102,8 @@ namespace Poco
 			List<string> cns = new List<string> (components);
 			cns.Reverse ();
 			foreach (string name in cns) {
-				if (TypeNames.ContainsKey(name)) {
-					return TypeNames[name];
+				if (TypeNames.ContainsKey (name)) {
+					return TypeNames [name];
 				}
 			}
 			return DefaultTypeName;
@@ -158,8 +158,9 @@ namespace Poco
 		private Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
-			if (UICamera.currentCamera != null) {
-				CameraViewportPoint = Math.Abs (UICamera.currentCamera.WorldToViewportPoint (gameObject.transform.position).z);
+			Camera camera = GetCamera ();
+			if (camera != null) {
+				CameraViewportPoint = Math.Abs (camera.WorldToViewportPoint (gameObject.transform.position).z);
 			}
 			Dictionary<string, float> zOrders = new Dictionary<string, float> () {
 				{ "global", 0f },
@@ -233,11 +234,17 @@ namespace Poco
 		protected static Vector2 WorldToGUIPoint (Vector3 world)
 		{
 			Vector2 screenPoint = Vector2.zero;
-			if (UICamera.currentCamera != null) {
-				screenPoint = UICamera.currentCamera.WorldToScreenPoint (world);
+			Camera camera = GetCamera ();
+			if (camera != null) {
+				screenPoint = camera.WorldToScreenPoint (world);
 				screenPoint.y = (float)Screen.height - screenPoint.y;
 			}
 			return screenPoint;
+		}
+
+		protected static Camera GetCamera ()
+		{
+			return UICamera.currentCamera != null ? UICamera.currentCamera : UICamera.mainCamera;
 		}
 	}
 }
