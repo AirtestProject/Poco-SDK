@@ -35,10 +35,12 @@ namespace Poco
 		public static string DefaultTypeName = "GameObject";
 		private GameObject gameObject;
 		private Dictionary<string, object> payload;
+		private Camera camera;
 
 		public UnityNode (GameObject obj)
 		{
 			gameObject = obj;
+			camera = GetCamera ();
 			payload = GetPayload ();
 		}
 
@@ -71,6 +73,10 @@ namespace Poco
 				}
 			}
 			return ret;
+		}
+
+		private Camera GetCamera () {
+			return UICamera.currentCamera != null ? UICamera.currentCamera : NGUITools.FindCameraForLayer (gameObject.layer);
 		}
 
 		private Dictionary<string, object> GetPayload ()
@@ -163,7 +169,6 @@ namespace Poco
 		private Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
-			Camera camera = UICamera.currentCamera;
 			if (camera != null) {
 				CameraViewportPoint = Math.Abs (camera.WorldToViewportPoint (gameObject.transform.position).z);
 			}
@@ -216,7 +221,7 @@ namespace Poco
 			return null;
 		}
 
-		protected Rect BoundsToScreenSpace (Bounds bounds)
+		private Rect BoundsToScreenSpace (Bounds bounds)
 		{
 			Vector3 cen;
 			Vector3 ext;
@@ -242,10 +247,9 @@ namespace Poco
 			return new Rect (min.x, min.y, max.x - min.x, max.y - min.y);
 		}
 
-		protected static Vector2 WorldToGUIPoint (Vector3 world)
+		private Vector2 WorldToGUIPoint (Vector3 world)
 		{
 			Vector2 screenPoint = Vector2.zero;
-			Camera camera = UICamera.currentCamera;
 			if (camera != null) {
 				screenPoint = camera.WorldToScreenPoint (world);
 				screenPoint.y = (float)Screen.height - screenPoint.y;
