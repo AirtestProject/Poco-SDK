@@ -163,7 +163,7 @@ namespace Poco
 		private Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
-			Camera camera = GetCamera ();
+			Camera camera = UICamera.currentCamera;
 			if (camera != null) {
 				CameraViewportPoint = Math.Abs (camera.WorldToViewportPoint (gameObject.transform.position).z);
 			}
@@ -245,17 +245,12 @@ namespace Poco
 		protected static Vector2 WorldToGUIPoint (Vector3 world)
 		{
 			Vector2 screenPoint = Vector2.zero;
-			Camera camera = GetCamera ();
+			Camera camera = UICamera.currentCamera;
 			if (camera != null) {
 				screenPoint = camera.WorldToScreenPoint (world);
 				screenPoint.y = (float)Screen.height - screenPoint.y;
 			}
 			return screenPoint;
-		}
-
-		protected static Camera GetCamera ()
-		{
-			return UICamera.currentCamera != null ? UICamera.currentCamera : UICamera.mainCamera;
 		}
 	}
 }
