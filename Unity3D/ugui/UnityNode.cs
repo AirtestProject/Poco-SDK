@@ -157,8 +157,12 @@ namespace Poco
 		{
 			List<string> components = new List<string> ();
 			Component[] allComponents = gameObject.GetComponents<Component> ();
-			foreach (Component ac in allComponents) {
-				components.Add (ac.GetType ().Name);
+			if (allComponents != null){
+				foreach (Component ac in allComponents) {
+					if (ac != null) {
+						components.Add (ac.GetType ().Name);
+					}
+				}
 			}
 			return components;
 		}
