@@ -216,17 +216,21 @@ namespace Poco
 
 		private float[] GameObjectAnchorInScreen (Renderer renderer, Rect rect, Vector3 objectPos)
 		{
-			float[] anchor = { 0.5f, 0.5f };
+			float[] defaultValue = { 0.5f, 0.5f };
 
 			if (!renderer) { //<Modified> some object do not have renderer
+				return defaultValue;
+			}
+			float[] anchor = {(objectPos.x - rect.xMin) / rect.width, (objectPos.y - rect.yMin) / rect.height};
+			if (Double.IsNaN (anchor [0]) || Double.IsNaN (anchor [1])) {
+				return defaultValue;
+			} else if (Double.IsPositiveInfinity (anchor [0]) || Double.IsPositiveInfinity (anchor [1])) {
+				return defaultValue;
+			} else if (Double.IsNegativeInfinity (anchor [0]) || Double.IsNegativeInfinity (anchor [1])) {
+				return defaultValue;
+			} else {
 				return anchor;
 			}
-			anchor [0] = (objectPos.x - rect.xMin) / rect.width;
-			anchor [1] = (objectPos.y - rect.yMin) / rect.height;
-			if (Double.IsNaN (anchor [0]) || Double.IsNaN (anchor [1])) {
-				return new float[] { 0.5f, 0.5f };
-			}
-			return anchor;
 		}
 
 		private string GetImageSourceTexture ()
