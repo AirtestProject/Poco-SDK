@@ -29,22 +29,31 @@ namespace Poco
 		};
 		public static string DefaultTypeName = "GameObject";
 		private GameObject gameObject;
-		private Dictionary<string, object> payload;
+		private Renderer renderer;
+		private RectTransform rectTransform;
+		private Rect rect;
+		private Vector2 objectPos;
+		private List<string> components;
+
 
 		public UnityNode (GameObject obj)
 		{
 			gameObject = obj;
-			payload = GetPayload ();
+			renderer = gameObject.GetComponent<Renderer> ();
+			rectTransform = gameObject.GetComponent<RectTransform> ();
+			rect = GameObjectRect (renderer, rectTransform);
+			objectPos = renderer ? WorldToGUIPoint (renderer.bounds.center) : Vector2.zero;
+			components = GameObjectAllComponents ();
 		}
 
 		public override AbstractNode getParent ()
-		{ //<Modified> 不要用new, 这样会掩盖原来的结构, 多态就没有意义了
+		{
 			GameObject parentObj = gameObject.transform.parent.gameObject;
 			return new UnityNode (parentObj);
 		}
 
 		public override List<AbstractNode> getChildren ()
-		{ //<Modified> 不要用new, 这样会掩盖原来的结构, 多态就没有意义了
+		{
 			List<AbstractNode> children = new List<AbstractNode> ();
 			foreach (Transform child in gameObject.transform) {
 				children.Add (new UnityNode (child.gameObject));
@@ -54,11 +63,41 @@ namespace Poco
 
 		public override object getAttr (string attrName)
 		{
-			return payload.ContainsKey (attrName) ? payload[attrName] : null;
+			switch (attrName) {
+				case "name":
+					return gameObject.name;
+				case "type":
+					return GuessObjectTypeFromComponentNames (components);
+				case "visible":
+					return GameObjectVisible (renderer, components);
+				case "pos":
+					return GameObjectPosInScreen (objectPos, renderer, rectTransform, rect);
+				case "size":
+					return GameObjectSizeInScreen (rect);
+				case "scale":
+					return new List<float> (){ 1.0f, 1.0f };
+				case "anchorPoint":
+					return GameObjectAnchorInScreen (renderer, rect, objectPos);
+				case "zOrders":
+					return GameObjectzOrders ();
+				case "clickable":
+					return GameObjectClickable (components);
+				case "text":
+					return GameObjectText ();
+				case "components":
+					return components;
+				case "texture":
+					return GetImageSourceTexture ();
+				case "tag":
+					return GameObjectTag ();
+				default:
+					return null;
+			}
 		}
 
 		public override Dictionary<string, object> enumerateAttrs ()
 		{
+			Dictionary<string, object> payload = GetPayload ();
 			Dictionary<string, object> ret = new Dictionary<string, object> ();
 			foreach (KeyValuePair<string, object>  p in payload) {
 				if (p.Value != null) {
@@ -70,18 +109,13 @@ namespace Poco
 
 		private Dictionary<string, object> GetPayload ()
 		{
-			Renderer renderer = gameObject.GetComponent<Renderer> ();
-			RectTransform rectTransform = gameObject.GetComponent<RectTransform> ();
-			Rect rect = GameObjectRect (renderer, rectTransform);
-			Vector2 objectPos = renderer ? WorldToGUIPoint (renderer.bounds.center) : Vector2.zero;
-			List<string> components = GameObjectAllComponents ();
 			Dictionary<string, object> payload = new Dictionary<string, object> () {
 				{ "name", gameObject.name },
 				{ "type", GuessObjectTypeFromComponentNames (components) },
 				{ "visible", GameObjectVisible (renderer, components) },
 				{ "pos", GameObjectPosInScreen (objectPos, renderer, rectTransform, rect) },
 				{ "size", GameObjectSizeInScreen (rect) },
-				{ "scale", new float[] { 1.0f, 1.0f } },
+				{ "scale", new List<float> (){ 1.0f, 1.0f } },
 				{ "anchorPoint", GameObjectAnchorInScreen (renderer, rect, objectPos) },
 				{ "zOrders", GameObjectzOrders () },
 				{ "clickable", GameObjectClickable (components) },
