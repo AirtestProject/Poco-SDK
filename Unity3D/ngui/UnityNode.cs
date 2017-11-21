@@ -76,7 +76,7 @@ namespace Poco
 		}
 
 		private Camera GetCamera () {
-			return UICamera.currentCamera != null ? UICamera.currentCamera : NGUITools.FindCameraForLayer (gameObject.layer);
+			return UICamera.currentCamera != null ? UICamera.currentCamera : UICamera.mainCamera;
 		}
 
 		private Dictionary<string, object> GetPayload ()
