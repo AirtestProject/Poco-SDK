@@ -94,6 +94,8 @@ namespace Poco
 					return GetImageSourceTexture ();
 				case "tag":
 					return GameObjectTag ();
+				case "_instanceId":
+					return gameObject.GetInstanceID();
 				default:
 					return null;
 			}
@@ -131,7 +133,8 @@ namespace Poco
 				{ "text", GameObjectText () },
 				{ "components", components },
 				{ "texture", GetImageSourceTexture () },
-				{ "tag", GameObjectTag () }
+				{ "tag", GameObjectTag () },
+				{ "_instanceId", gameObject.GetInstanceID() },
 			};
 			return payload;
 		}
@@ -288,6 +291,19 @@ namespace Poco
 				screenPoint.y = (float)Screen.height - screenPoint.y;
 			}
 			return screenPoint;
+		}
+
+		public static bool SetText(GameObject go, string textVal)
+		{
+			if (go != null) {
+				var inputField = go.GetComponent<UIInput> ();
+				if (inputField != null) {
+					// 这一行未测试，给输入框设置文本
+					inputField.text = textVal;
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

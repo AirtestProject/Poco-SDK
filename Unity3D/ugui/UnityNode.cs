@@ -90,6 +90,8 @@ namespace Poco
 					return GetImageSourceTexture ();
 				case "tag":
 					return GameObjectTag ();
+				case "_instanceId":
+					return gameObject.GetInstanceID();
 				default:
 					return null;
 			}
@@ -122,7 +124,8 @@ namespace Poco
 				{ "text", GameObjectText () },
 				{ "components", components },
 				{ "texture", GetImageSourceTexture () },
-				{ "tag", GameObjectTag () }
+				{ "tag", GameObjectTag () },
+				{ "_instanceId", gameObject.GetInstanceID() },
 			};
 			return payload;
 		}
@@ -327,6 +330,18 @@ namespace Poco
 			rect.x -= (rectTransform.pivot.x * size.x);
 			rect.y -= ((1.0f - rectTransform.pivot.y) * size.y);
 			return rect;
+		}
+
+		public static bool SetText(GameObject go, string textVal)
+		{
+			if (go != null) {
+				var inputField = go.GetComponent<InputField> ();
+				if (inputField != null) {
+					inputField.text = textVal;
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

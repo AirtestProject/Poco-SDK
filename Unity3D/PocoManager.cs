@@ -11,6 +11,7 @@ using System;
 using TcpServer;
 using Poco;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using Debug = UnityEngine.Debug;
 
@@ -48,6 +49,7 @@ public class PocoManager : MonoBehaviour
 		rpc.addRpcMethod ("GetScreenSize", GetScreenSize);
 		rpc.addRpcMethod ("Dump", Dump);
 		rpc.addRpcMethod ("GetDebugProfilingData", GetDebugProfilingData);
+		rpc.addRpcMethod ("SetText", SetText);
 
 		mRunning = true;
 
@@ -71,6 +73,7 @@ public class PocoManager : MonoBehaviour
 	[RPC]
 	static object Add (List<object> param)
 	{
+		// test only
 		int first = Convert.ToInt32 (param [0]);
 		int second = Convert.ToInt32 (param [1]);
 		return first + second;
@@ -117,6 +120,19 @@ public class PocoManager : MonoBehaviour
 	private object GetDebugProfilingData (List<object> param)
 	{
 		return debugProfilingData;
+	}
+
+	[RPC]
+	private object SetText (List<object> param)
+	{
+		var instanceId = Convert.ToInt32 (param [0]);
+		var textVal = param [1] as string;
+		foreach (var go in GameObject.FindObjectsOfType<GameObject>()) {
+			if (go.GetInstanceID () == instanceId) {
+				return UnityNode.SetText (go, textVal);
+			}
+		}
+		return false;
 	}
 
 	void Update ()
@@ -169,7 +185,7 @@ public class RPCParser
 			string method = data ["method"].ToString ();
 			List<object> param = null;
 			if (data.ContainsKey ("params")) {
-				param = data ["params"] as List<object>;              
+				param = ((JArray)(data["params"])).ToObject<List<object>>();
 			}
 	
 			object idAction = null;
