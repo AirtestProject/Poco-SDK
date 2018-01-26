@@ -6,4 +6,4 @@ Each directory is an engine specific poco-sdk implementation. You can simply cop
 
 `sdk` directory contains the unimplemented language specific base sdk, which can be used to implement an poco-sdk for other game engines
 
-For more detailed integration steps, please refer to [Integration Guide]().
+For more detailed integration steps, please refer to [Integration Guide](http://poco.readthedocs.io/en/latest/source/doc/integration.html).
