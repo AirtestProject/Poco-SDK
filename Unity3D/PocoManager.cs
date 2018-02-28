@@ -17,6 +17,8 @@ using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
+	public const int versionCode = 1;
+
 	public int port = 5001;
 	private bool mRunning;
 	public AsyncTcpServer server = null;
@@ -40,6 +42,7 @@ public class PocoManager : MonoBehaviour
 
 	void Awake ()
 	{
+		Application.runInBackground = true;
 		DontDestroyOnLoad (this);
 
 		prot = new SimpleProtocolFilter ();
@@ -50,6 +53,7 @@ public class PocoManager : MonoBehaviour
 		rpc.addRpcMethod ("Dump", Dump);
 		rpc.addRpcMethod ("GetDebugProfilingData", GetDebugProfilingData);
 		rpc.addRpcMethod ("SetText", SetText);
+		rpc.addRpcMethod ("GetSDKVersion", GetSDKVersion);
 
 		mRunning = true;
 
@@ -133,6 +137,12 @@ public class PocoManager : MonoBehaviour
 			}
 		}
 		return false;
+	}
+
+	[RPC]
+	private object GetSDKVersion(List<object> param)
+	{
+		return versionCode;
 	}
 
 	void Update ()
