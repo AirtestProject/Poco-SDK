@@ -73,7 +73,7 @@ namespace Poco
 				case "pos":
 					return GameObjectPosInScreen (objectPos, renderer, rectTransform, rect);
 				case "size":
-					return GameObjectSizeInScreen (rect);
+					return GameObjectSizeInScreen (rect, rectTransform);
 				case "scale":
 					return new List<float> (){ 1.0f, 1.0f };
 				case "anchorPoint":
@@ -116,7 +116,7 @@ namespace Poco
 				{ "type", GuessObjectTypeFromComponentNames (components) },
 				{ "visible", GameObjectVisible (renderer, components) },
 				{ "pos", GameObjectPosInScreen (objectPos, renderer, rectTransform, rect) },
-				{ "size", GameObjectSizeInScreen (rect) },
+				{ "size", GameObjectSizeInScreen (rect, rectTransform) },
 				{ "scale", new List<float> (){ 1.0f, 1.0f } },
 				{ "anchorPoint", GameObjectAnchorInScreen (renderer, rect, objectPos) },
 				{ "zOrders", GameObjectzOrders () },
@@ -228,7 +228,7 @@ namespace Poco
 			return rect;
 		}
 
-		private float[] GameObjectPosInScreen (Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
+		public virtual float[] GameObjectPosInScreen (Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
 		{
 			float[] pos = { 0f, 0f };
 
@@ -237,17 +237,60 @@ namespace Poco
 				pos [0] = objectPos.x / (float)Screen.width;
 				pos [1] = objectPos.y / (float)Screen.height;
 			} else if (rectTransform) {
-				// ui object (rendered on screen space, other render modes may be different)
-				// use center pos for now
-				pos [0] = rect.center.x / (float)Screen.width;
-				pos [1] = rect.center.y / (float)Screen.height;
-			}
-			return pos;
+                // ui object (rendered on screen space, other render modes may be different)
+                // use center pos for now
+                Canvas rootCanvas = GetRootCanvas(rectTransform);
+
+                switch (rootCanvas.renderMode)
+                {
+                    case RenderMode.ScreenSpaceCamera:
+                        //如果是UI就用MainCanvas转一次屏幕坐标
+                        Vector2 position = RectTransformUtility.WorldToScreenPoint(rootCanvas.worldCamera, rectTransform.transform.position);
+                        pos[0] = position.x / (float)Screen.width;
+                        pos[1] = ((float)Screen.height - position.y) / (float)Screen.height;
+                        break;
+                    default:
+                        pos[0] = rect.center.x / (float)Screen.width;
+                        pos[1] = rect.center.y / (float)Screen.height;
+                        break;
+                }
+
+            }
+            return pos;
 		}
 
-		private float[] GameObjectSizeInScreen (Rect rect)
+        /// <summary>
+        /// 获取根Canvas
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <returns></returns>
+        private Canvas GetRootCanvas(RectTransform rectTransform)
+        {
+            Canvas canvas = rectTransform.GetComponentInParent<Canvas>();
+
+            if (canvas.isRootCanvas) return canvas;
+
+            return canvas.rootCanvas;
+        }
+
+
+        public virtual float[] GameObjectSizeInScreen (Rect rect, RectTransform rectTransform)
 		{
-			float[] size = { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+            float[] size = { 0f, 0f };
+
+            if (rectTransform) {
+                Canvas rootCanvas = GetRootCanvas(rectTransform);
+                switch (rootCanvas.renderMode)
+                {
+                    case RenderMode.ScreenSpaceCamera:
+                        Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
+                        size = new float[]{ _rect.width / (float)Screen.width, _rect.height / (float)Screen.height };
+                        break;
+                }
+            } else {
+			    size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+            }
+
 			return size;
 		}
 
