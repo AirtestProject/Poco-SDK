@@ -219,7 +219,7 @@ namespace Poco
 			return rect;
 		}
 
-		public virtual float[] GameObjectPosInScreen (Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
+		private float[] GameObjectPosInScreen (Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
 		{
 			float[] pos = { 0f, 0f };
 
@@ -266,7 +266,7 @@ namespace Poco
 			#endif
 		}
 
-		public virtual float[] GameObjectSizeInScreen (Rect rect, RectTransform rectTransform)
+		private float[] GameObjectSizeInScreen (Rect rect, RectTransform rectTransform)
 		{
 			float[] size = { 0f, 0f };
 			if (rectTransform) {
