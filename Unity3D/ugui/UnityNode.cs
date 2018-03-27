@@ -64,36 +64,36 @@ namespace Poco
 		public override object getAttr (string attrName)
 		{
 			switch (attrName) {
-				case "name":
-					return gameObject.name;
-				case "type":
-					return GuessObjectTypeFromComponentNames (components);
-				case "visible":
-					return GameObjectVisible (renderer, components);
-				case "pos":
-					return GameObjectPosInScreen (objectPos, renderer, rectTransform, rect);
-				case "size":
-					return GameObjectSizeInScreen (rect);
-				case "scale":
-					return new List<float> (){ 1.0f, 1.0f };
-				case "anchorPoint":
-					return GameObjectAnchorInScreen (renderer, rect, objectPos);
-				case "zOrders":
-					return GameObjectzOrders ();
-				case "clickable":
-					return GameObjectClickable (components);
-				case "text":
-					return GameObjectText ();
-				case "components":
-					return components;
-				case "texture":
-					return GetImageSourceTexture ();
-				case "tag":
-					return GameObjectTag ();
-				case "_instanceId":
-					return gameObject.GetInstanceID();
-				default:
-					return null;
+			case "name":
+				return gameObject.name;
+			case "type":
+				return GuessObjectTypeFromComponentNames (components);
+			case "visible":
+				return GameObjectVisible (renderer, components);
+			case "pos":
+				return GameObjectPosInScreen (objectPos, renderer, rectTransform, rect);
+			case "size":
+				return GameObjectSizeInScreen (rect, rectTransform);
+			case "scale":
+				return new List<float> (){ 1.0f, 1.0f };
+			case "anchorPoint":
+				return GameObjectAnchorInScreen (renderer, rect, objectPos);
+			case "zOrders":
+				return GameObjectzOrders ();
+			case "clickable":
+				return GameObjectClickable (components);
+			case "text":
+				return GameObjectText ();
+			case "components":
+				return components;
+			case "texture":
+				return GetImageSourceTexture ();
+			case "tag":
+				return GameObjectTag ();
+			case "_instanceId":
+				return gameObject.GetInstanceID();
+			default:
+				return null;
 			}
 		}
 
@@ -116,7 +116,7 @@ namespace Poco
 				{ "type", GuessObjectTypeFromComponentNames (components) },
 				{ "visible", GameObjectVisible (renderer, components) },
 				{ "pos", GameObjectPosInScreen (objectPos, renderer, rectTransform, rect) },
-				{ "size", GameObjectSizeInScreen (rect) },
+				{ "size", GameObjectSizeInScreen (rect, rectTransform) },
 				{ "scale", new List<float> (){ 1.0f, 1.0f } },
 				{ "anchorPoint", GameObjectAnchorInScreen (renderer, rect, objectPos) },
 				{ "zOrders", GameObjectzOrders () },
@@ -146,9 +146,9 @@ namespace Poco
 		{
 			if (gameObject.activeInHierarchy) {
 				bool light = components.Contains ("Light");
-				bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
+				// bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
 				bool particle = components.Contains ("ParticleSystem") && components.Contains ("ParticleSystemRenderer");
-				if (light || mesh || particle) {
+				if (light || particle) {
 					return false;
 				} else {
 					return renderer ? renderer.isVisible : true;
@@ -161,16 +161,7 @@ namespace Poco
 		private bool GameObjectClickable (List<string> components)
 		{
 			Button button = gameObject.GetComponent<Button> ();
-			if (button) {
-				return button.isActiveAndEnabled;
-			}
-			// G42游戏比较特殊，有些event是用lua脚本控制的
-			// 这里暂时用lua脚本名去判断是否可点击
-			// 后续再看看其它unity游戏是什么情况
-			if (components.Contains ("DULuaUIEvents")) {
-				return true;
-			}
-			return false;
+			return button ? button.isActiveAndEnabled : false;
 		}
 
 		private string GameObjectText ()
@@ -239,15 +230,59 @@ namespace Poco
 			} else if (rectTransform) {
 				// ui object (rendered on screen space, other render modes may be different)
 				// use center pos for now
-				pos [0] = rect.center.x / (float)Screen.width;
-				pos [1] = rect.center.y / (float)Screen.height;
+				Canvas rootCanvas = GetRootCanvas(gameObject);
+				switch (rootCanvas.renderMode) {
+				case RenderMode.ScreenSpaceCamera:
+					//如果是UI就用MainCanvas转一次屏幕坐标
+					Vector2 position = RectTransformUtility.WorldToScreenPoint(rootCanvas.worldCamera, rectTransform.transform.position);
+					pos[0] = position.x / (float)Screen.width;
+					pos[1] = ((float)Screen.height - position.y) / (float)Screen.height;
+					break;
+				default:
+					pos[0] = rect.center.x / (float)Screen.width;
+					pos[1] = rect.center.y / (float)Screen.height;
+					break;
+				}
 			}
 			return pos;
 		}
 
-		private float[] GameObjectSizeInScreen (Rect rect)
+		private Canvas GetRootCanvas(GameObject gameObject)
 		{
-			float[] size = { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+			Canvas canvas = gameObject.GetComponentInParent<Canvas>();
+			// 如果unity版本小于unity5.5，就用递归的方式取吧，没法直接取rootCanvas
+			#if UNITY_5_3 || UNITY_5_4
+			if (canvas.isRootCanvas) {
+				return canvas;
+			} else {
+				if (gameObject.transform.parent.gameObject != null) {
+					return GetRootCanvas(gameObject.transform.parent.gameObject);
+				} else {
+					return null;
+				}
+			}
+			#else
+			return canvas.isRootCanvas ? canvas : canvas.rootCanvas;
+			#endif
+		}
+
+		private float[] GameObjectSizeInScreen (Rect rect, RectTransform rectTransform)
+		{
+			float[] size = { 0f, 0f };
+			if (rectTransform) {
+				Canvas rootCanvas = GetRootCanvas(gameObject);
+				switch (rootCanvas.renderMode) {
+				case RenderMode.ScreenSpaceCamera:
+					Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
+					size = new float[]{ _rect.width / (float)Screen.width, _rect.height / (float)Screen.height };
+					break;
+				default:
+					size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+					break;
+				}
+			} else {
+				size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+			}
 			return size;
 		}
 
