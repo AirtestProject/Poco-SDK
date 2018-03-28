@@ -233,11 +233,24 @@ namespace Poco
 				Canvas rootCanvas = GetRootCanvas(gameObject);
 				switch (rootCanvas.renderMode) {
 				case RenderMode.ScreenSpaceCamera:
-					//如果是UI就用MainCanvas转一次屏幕坐标
-					Vector2 position = RectTransformUtility.WorldToScreenPoint(rootCanvas.worldCamera, rectTransform.transform.position);
-					pos[0] = position.x / (float)Screen.width;
-					pos[1] = ((float)Screen.height - position.y) / (float)Screen.height;
-					break;
+                        //上一个方案经过实际测试发现还有两个问题存在
+                        //1.在有Canvas Scaler修改了RootCanvas的Scale的情况下坐标的抓取仍然不对，影响到了ScreenSpaceCameram模式在不同分辨率和屏幕比例下识别的兼容性。
+                        //2.RectTransformUtility转的 rectTransform.transform.position本质上得到的是RectTransform.pivot中心轴在屏幕上的坐标，如果pivot不等于(0.5,0.5)，
+                        //那么获取到的position就不等于图形的中心点。
+                        //试了一晚上，找到了解决办法。
+
+                        //用MainCanvas转一次屏幕坐标
+                        Vector2 position = RectTransformUtility.WorldToScreenPoint(rootCanvas.worldCamera, rectTransform.transform.position);
+                        //注意: 这里的position其实是Pivot点在Screen上的坐标，并不是图形意义上的中心点,在经过下列玄学公式换算才是真的图形中心在屏幕的位置。
+                        //公式内算上了rootCanvas.scaleFactor 缩放因子，经测试至少在Canvas Scaler.Expand模式下，什么分辨率和屏幕比都抓的很准，兼容性很强，其他的有待测试。
+                        //由于得出来的坐标是左下角为原点，触控输入是左上角为原点，所以要上下反转一下Poco才能用,所以y坐标用Screen.height减去。
+                        position.Set(
+                            position.x - rectTransform.rect.width * rootCanvas.scaleFactor * (rectTransform.pivot.x - 0.5f),
+                            Screen.height - (position.y - rectTransform.rect.height * rootCanvas.scaleFactor * (rectTransform.pivot.y - 0.5f))
+                            );
+                        pos[0] = position.x / Screen.width;
+                        pos[1] = position.y / Screen.height;
+                        break; 
 				default:
 					pos[0] = rect.center.x / (float)Screen.width;
 					pos[1] = rect.center.y / (float)Screen.height;
@@ -274,7 +287,7 @@ namespace Poco
 				switch (rootCanvas.renderMode) {
 				case RenderMode.ScreenSpaceCamera:
 					Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
-					size = new float[]{ _rect.width / (float)Screen.width, _rect.height / (float)Screen.height };
+					size = new float[]{ _rect.width * rootCanvas.scaleFactor / (float)Screen.width, _rect.height * rootCanvas.scaleFactor / (float)Screen.height };
 					break;
 				default:
 					size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
