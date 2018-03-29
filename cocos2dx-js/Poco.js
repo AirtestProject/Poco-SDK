@@ -7,119 +7,111 @@
 
 'use strict';
 
-var ws = WebSocket || window.WebSocket || window.MozWebSocket;
-const SERVER_ADDRESS = "ws://localhost:5001";
-const SERVER_ADDRESS_EXTRA = "ws://localhost:5002";
-var Dumper = require('./Cocos2dxDumper');
+var ws = WebSocket || window.WebSocket || window.MozWebSocket
+var SERVER_ADDRESS = "ws://localhost:5001"
+var SERVER_ADDRESS_EXTRA = "ws://localhost:5002"
+var PORT = 5003
+var Dumper = require('./Cocos2dxDumper')
 
-
-class Rpc{
-
-	constructor(addr){
-		this.addr = addr;
-		// this.connected = false;
-        this.dumper = new Dumper();
-        this.rpc_dispacher = {
-            "dump": this.dumper.dumpHierarchy,
-        }
-        this.init_server();
-	}
-
-    init_server(){
-        console.log("try start wss..")
-        try{
-            this.server = new WebSocketServer(5003);
-
-            this.server.onServerUp = (evt) => {
-                console.log("Network onServerUp...", evt);
-            };
-
-            this.server.onServerDown = (evt) => {
-                console.log('Network onServerDown...');  
-            };
-
-            this.server.onConnection = (evt) => {
-                console.log('Network onConnection...');  
-            };
-
-            this.server.onMessage = (evt) => {
-                console.log('Network onMessage...', evt.data);
-                var data = JSON.parse(evt.data);
-                var method = data.method
-                var params = data.params
-                var func = this.rpc_dispacher[method]
-                var result = func.apply(this.dumper, params)
-                var ret = {
-                    "id": data.id,
-                    "jsonrpc": data.jsonrpc,
-                    "result": result,
-                }
-                console.log(ret)
-                ret = JSON.stringify(ret)
-                console.log(ret)
-                this.server.send(evt.socketId, ret)
-            };
-
-            this.server.onDisconnection = (evt) => {
-                console.log('Network onDisconnection...');  
-            };
-
-            this.server.onError = (evt) => {
-                console.log('Network onerror...');
-            };
-        } catch(e){
-            console.log(e);
-        }
+var PocoManager = function(port) {
+    Object.call(this)
+    this.port = port || PORT
+    this.addr = SERVER_ADDRESS  // 弃用变量
+    // this.connected = false
+    this.dumper = new Dumper()
+    this.rpc_dispacher = {
+        "dump": this.dumper.dumpHierarchy,
     }
+    this.init_server()
+}
+PocoManager.prototype = Object.create(PocoManager.prototype)
 
-    init_connection(){
-		// if (!this.connected){
-		// 	console.log("try connecting ws server..")
-		// 	this.connect()	
-		// }
-		// setTimeout(this.init_connection.bind(this), 5000);
-	}
+PocoManager.prototype.init_server = function() {
+    console.log("try starting wss..")
+    try{
+        this.server = new WebSocketServer(this.port)
 
-    connect(){
-        // init socket client
-        var s = new ws(this.addr)
-        s.onopen = (evt) => {
-            console.log('Network onopen...');
-            this.connected = true;
-            // s.send("Hello, I am cocosjs");
-        };
-
-        s.onmessage = (evt) => {  
-            console.log('Network onmessage...'); //, evt);
-            var data = JSON.parse(evt.data);
+        this.server.onServerUp = function(evt) {
+            console.log("Network onServerUp...", evt)
+        }
+        this.server.onServerDown = function(evt) {
+            console.log('Network onServerDown...')
+        }
+        this.server.onConnection = function(evt) {
+            console.log('Network onConnection...')
+        }
+        this.server.onMessage = function(evt) {
+            console.log('Network onMessage...', evt.data)
+            var data = JSON.parse(evt.data)
             var method = data.method
             var params = data.params
             var func = this.rpc_dispacher[method]
             var result = func.apply(this.dumper, params)
             var ret = {
-            	"id": data.id,
-            	"jsonrpc": data.jsonrpc,
-            	"result": result,
+                "id": data.id,
+                "jsonrpc": data.jsonrpc,
+                "result": result,
             }
             console.log(ret)
             ret = JSON.stringify(ret)
-            s.send(ret)
-        };
-          
-        s.onerror = (evt) => {  
-            console.log('Network onerror...');  
-        };
-          
-        s.onclose = (evt) => {  
-            console.log('Network onclose...');  
-            this.connected = false;
+            console.log(ret)
+            this.server.send(evt.socketId, ret)
+        }
+        this.server.onDisconnection = function(evt) {
+            console.log('Network onDisconnection...', evt)  
+        }
+        this.server.onError = function(evt) {
+            console.log('Network onerror...', evt)
+        }
 
-            s = null;
-        };
+        this.server.onServerUp = this.server.onServerUp.bind(this)
+        this.server.onServerDown = this.server.onServerDown.bind(this)
+        this.server.onConnection = this.server.onConnection.bind(this)
+        this.server.onMessage = this.server.onMessage.bind(this)
+        this.server.onDisconnection = this.server.onDisconnection.bind(this)
+        this.server.onError = this.server.onError.bind(this)
+    } catch(e) {
+        console.log(e)
     }
-
 }
 
-var r = new Rpc(SERVER_ADDRESS);
-// var r2 = new Rpc(SERVER_ADDRESS_EXTRA);
-module.exports = r;
+PocoManager.prototype.connect = function() {
+    // init socket client
+    var s = new ws(this.addr)
+    s.onopen = function(evt) {
+        console.log('Network onopen...')
+        this.connected = true
+        // s.send("Hello, I am cocosjs")
+    }
+    s.onmessage = function(evt) {  
+        console.log('Network onmessage...')
+        var data = JSON.parse(evt.data)
+        var method = data.method
+        var params = data.params
+        var func = this.rpc_dispacher[method]
+        var result = func.apply(this.dumper, params)
+        var ret = {
+            "id": data.id,
+            "jsonrpc": data.jsonrpc,
+            "result": result,
+        }
+        console.log(ret)
+        ret = JSON.stringify(ret)
+        s.send(ret)
+    }
+    s.onerror = function(evt) {  
+        console.log('Network onerror...')
+    }
+    s.onclose = function(evt) {  
+        console.log('Network onclose...')
+        this.connected = false
+        s = null
+    }
+
+    s.onopen = s.onopen.bind(this)
+    s.onmessage = s.onmessage.bind(this)
+    s.onerror = s.onerror.bind(this)
+    s.onclose = s.onclose.bind(this)
+}
+
+module.exports = PocoManager
