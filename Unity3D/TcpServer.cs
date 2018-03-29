@@ -41,7 +41,7 @@ namespace TcpServer
 			while (buf.Length > HEADER_SIZE) {
 				int data_size = BitConverter.ToInt32 (buf, 0);
 				if (buf.Length >= data_size + HEADER_SIZE) {
-					byte[] data_body = Slice (buf, HEADER_SIZE, buf.Length);
+					byte[] data_body = Slice (buf, HEADER_SIZE, data_size + HEADER_SIZE);
 					string content = System.Text.Encoding.Default.GetString (data_body);
 					msgs.Add (content);
 					buf = Slice (buf, data_size + HEADER_SIZE, buf.Length);
