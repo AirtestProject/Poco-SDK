@@ -58,4 +58,10 @@ AbstractNode.prototype.enumerateAttrs = function () {
     return ret
 }
 
-module.exports = AbstractNode;
+try {
+    module.exports = AbstractNode;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = AbstractNode;
+    }
+}

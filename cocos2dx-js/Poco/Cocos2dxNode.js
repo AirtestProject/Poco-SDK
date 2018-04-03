@@ -1,6 +1,29 @@
 // var cc = cc
 
-var AbstractNode = require('./sdk/AbstractNode')
+// var AbstractNode = require('./sdk/AbstractNode')
+var AbstractNode = window.AbstractNode
+
+var Vec2 = cc.Vec2 || cc.math.Vec2 || cc.math.Vec3
+
+var cgetter = function(node, property) {
+    var getterFunc = 'get' + property[0].toUpperCase() + property.slice(1)
+    if (node[getterFunc]) {
+        return node[getterFunc].call(node)
+    } else if (node[property]) {
+        return node[property]
+    } else {
+        return node['_' + property]  // 尝试访问私有属性
+    }
+}
+
+var csetter = function(node, property, val) {
+    var setterFunc = 'set' + property[0].toUpperCase() + property.slice(1)
+    if (node[setterFunc]) {
+        node[setterFunc].call(node, val)
+    } else {
+        node[property] = val
+    }
+}
 
 var Node = function (node, screenWidth, screenHeight) {
     AbstractNode.call(this)
@@ -11,7 +34,7 @@ var Node = function (node, screenWidth, screenHeight) {
 Node.prototype = Object.create(AbstractNode.prototype)
 
 Node.prototype.getParent = function () {
-    var parent = this.node.getParent()
+    var parent = cgetter(this.node, 'parent')
     if (!parent) {
         return null
     }
@@ -20,7 +43,7 @@ Node.prototype.getParent = function () {
 
 Node.prototype.getChildren = function () {
     var children = null
-    var nodeChildren = this.node.getChildren()
+    var nodeChildren = cgetter(this.node, 'children')
     if (nodeChildren) {
         children = []
         for (var i in nodeChildren) {
@@ -33,8 +56,8 @@ Node.prototype.getChildren = function () {
 
 Node.prototype.getAttr = function (attrName) {
     if (attrName === 'visible') {
-        if (this.node.isVisible) {
-            var visible = this.node.isVisible()
+        if (this.node.isVisible || this.node.visible) {
+            var visible = cgetter(this.node, 'visible')
             if (!visible) {
                 return false
             }
@@ -44,13 +67,13 @@ Node.prototype.getAttr = function (attrName) {
             // 有两个layer，一个layer中有个button，这个button点下去后把layer的visible设为false，
             // 这时候这个button的visible仍然是true的，如果这时候判断这个button是否存在或可见，
             // 则需要判断他的所有父节点是否可见了
-            var parent = this.node.getParent()
+            var parent = cgetter(this.node, 'parent')
             while (parent) {
                 var parentVisible = parent.isVisible()
                 if (!parentVisible) {
                     return false
                 }
-                parent = parent.getParent()
+                parent = cgetter(parent, 'parent')
             }
             return true
         } else {
@@ -58,7 +81,7 @@ Node.prototype.getAttr = function (attrName) {
         }
     }
     else if (attrName === 'name') {
-        return this.node.getName() || '<no-name>'
+        return cgetter(this.node, 'name') || '<no-name>'
     }
     else if (attrName === 'text') {
         for (var i in this.node._components) {
@@ -67,6 +90,8 @@ Node.prototype.getAttr = function (attrName) {
                 return c.string
             }
         }
+        
+        return cgetter(this.node, 'string')
     }
     else if (attrName === 'type') {
         var ntype = ''
@@ -77,14 +102,23 @@ Node.prototype.getAttr = function (attrName) {
                     break
                 }
             }
-        } else {
-            ntype = this.node.__classname__
+        }
+        if (!ntype) {
+            ntype = this.node.__classname__ || this.node._className
+        }
+        if (!ntype) {
+            if (this.node.constructor) {
+                ntype = this.node.constructor.name
+            }
+        }
+        if (!ntype) {
+            ntype = 'Object'
         }
         return ntype.replace(/\w+\./, '')
     }
     else if (attrName === 'pos') {
         // 转换成归一化坐标系，原点左上角
-        var pos = this.node.convertToWorldSpaceAR(new cc.Vec2(0, 0))
+        var pos = this.node.convertToWorldSpaceAR(new Vec2(0, 0))
         pos.x /= this.screenWidth
         pos.y /= this.screenHeight
         pos.y = 1 - pos.y
@@ -92,22 +126,27 @@ Node.prototype.getAttr = function (attrName) {
     }
     else if (attrName === 'size') {
         // 转换成归一化坐标系
-        var size = new cc.Size(this.node.getContentSize())
+        var size = null
+        if (this.node.getContentSize || this.node.contentSize) {
+            size = cgetter(this.node, 'contentSize')
+        } else {
+            size = new cc.Size(this.node.width, this.node.height)
+        }
         size.width /= this.screenWidth
         size.height /= this.screenHeight
         return [size.width, size.height]
     }
     else if (attrName === 'scale') {
-        return [this.node.getScaleX(), this.node.getScaleY()]
+        return [cgetter(this.node, 'scaleX'), cgetter(this.node, 'scaleY')]
     }
     else if (attrName === 'anchorPoint') {
-        var anchor = this.node.getAnchorPoint()
+        var anchor = cgetter(this.node, 'anchorPoint')
         return [anchor.x, 1 - anchor.y]
     }
     else if (attrName === 'zOrders') {
         return {
-            local: this.node.getLocalZOrder(), 
-            global: this.node.getGlobalZOrder(),
+            local: cgetter(this.node, 'localZOrder'), 
+            global: cgetter(this.node, 'globalZOrder'),
         }
     }
     else if (attrName == 'touchable') {
@@ -116,7 +155,7 @@ Node.prototype.getAttr = function (attrName) {
         }
     }
     else if (attrName === 'tag') {
-        return this.node.getTag()
+        return cgetter(this.node, 'tag')
     }
     else if (attrName === 'enabled') {
         if (this.node.isEnabled) {
@@ -124,7 +163,7 @@ Node.prototype.getAttr = function (attrName) {
         }
     }
     else if (attrName === 'rotation') {
-        return this.node.getRotation()
+        return cgetter(this.node, 'rotation')
     }
 
     return undefined
@@ -147,4 +186,11 @@ Node.prototype.getAvailableAttributeNames = function () {
     ])
 }
 
-module.exports = Node;
+
+try {
+    module.exports = Node;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = Node;
+    }
+}

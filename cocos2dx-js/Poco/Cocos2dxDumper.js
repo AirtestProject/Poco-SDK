@@ -1,7 +1,10 @@
 // var cc = cc
 
-var AbstractDumper = require('./sdk/AbstractDumper')
-var Node = require('./Cocos2dxNode')
+// var AbstractDumper = require('./sdk/AbstractDumper')
+// var Node = require('./Cocos2dxNode')
+
+var AbstractDumper = window.AbstractDumper
+var Node = window.Node
 
 var Dumper = function () {
     AbstractDumper.call(this)
@@ -10,7 +13,19 @@ Dumper.prototype = Object.create(AbstractDumper.prototype)
 
 Dumper.prototype.getRoot = function () {
     var winSize = cc.director.getWinSize()
-    return new Node(cc.director.getScene(), winSize.width, winSize.height)
+    var scene = null
+    if (cc.director.getScene) {
+        scene = cc.director.getScene()
+    } else {
+        scene = cc.director.getRunningScene()
+    }
+    return new Node(scene, winSize.width, winSize.height)
 }
 
-module.exports = Dumper;
+try {
+    module.exports = Dumper;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = Dumper;
+    }
+}
