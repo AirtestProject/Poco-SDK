@@ -16,4 +16,10 @@ Attributor.prototype.setAttr = function (node, attrName, attrVal) {
     node.setAttr(attrName, attrVal)
 }
 
-module.exports = Attributor;
+try {
+    module.exports = Attributor;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = Attributor;
+    }
+}

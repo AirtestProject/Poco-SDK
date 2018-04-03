@@ -70,4 +70,10 @@ DefaultMatcher.prototype.match = function (cond, node) {
     return false
 }
 
-module.exports = DefaultMatcher;
+try {
+    module.exports = DefaultMatcher;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = DefaultMatcher;
+    }
+}
