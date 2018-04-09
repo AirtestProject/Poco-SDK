@@ -118,14 +118,18 @@ PocoManager.all_socks = {}
 PocoManager.clients = {}
 
 -- rpc methods registration
+-- rpc 方法统一才是Pascal命名方式，其实是为了跟unity3d里使用的poco-sdk命名相同
 local dispatcher = {
-    getSDKVersion = function() return VERSION end,
-    dump = function() return Dumper:dumpHierarchy() end,
-    screenshot = function(width)
+    GetSDKVersion = function() return VERSION end,
+    Dump = function() return Dumper:dumpHierarchy() end,
+    Screenshot = function(width)
         width = width or 720
         return Screen:getScreen(width) 
     end,
-    getScreenSize = function() return Screen:getPortSize() end,
+    GetScreenSize = function() return Screen:getPortSize() end,
+    SetText = function(_instanceId, val)
+        -- TODO
+    end,
     test = function(arg1, arg2) return string.format('test arg1:%s arg2:%s', arg1, arg2) end,
 }
 
