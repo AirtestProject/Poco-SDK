@@ -25,7 +25,8 @@ public class PocoManager : MonoBehaviour
 	private RPCParser rpc = null;
 	private SimpleProtocolFilter prot = null;
 	private UnityDumper dumper = new UnityDumper ();
-	private List<TcpClientState> inbox = new List<TcpClientState> ();
+	// private List<TcpClientState> inbox = new List<TcpClientState> ();
+	private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState> ();
 	private object Lock = new object ();
 
 	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long> () {
@@ -59,19 +60,37 @@ public class PocoManager : MonoBehaviour
 
 		server = new AsyncTcpServer (port);
 		server.Encoding = Encoding.UTF8;
+		server.ClientConnected +=
+			new EventHandler<TcpClientConnectedEventArgs> (server_ClientConnected);
+		server.ClientDisconnected +=
+			new EventHandler<TcpClientDisconnectedEventArgs> (server_ClientDisconnected);
 		server.DatagramReceived += 
 			new EventHandler<TcpDatagramReceivedEventArgs<byte[]>> (server_Received);
 		server.Start ();
 		Debug.Log ("Tcp server started");
 	}
 
+	static void server_ClientConnected (object sender, TcpClientConnectedEventArgs e)
+	{
+		Debug.Log (string.Format ("TCP client {0} has connected.",
+			e.TcpClient.Client.RemoteEndPoint.ToString ()));
+	}
+
+	static void server_ClientDisconnected (object sender, TcpClientDisconnectedEventArgs  e)
+	{
+		Debug.Log (string.Format ("TCP client {0} has disconnected.",
+			e.TcpClient.Client.RemoteEndPoint.ToString ()));
+	}
+
 	private void server_Received (object sender, TcpDatagramReceivedEventArgs<byte[]> e)
 	{
 		Debug.Log (string.Format ("Client : {0} --> {1}", 
 			e.Client.TcpClient.Client.RemoteEndPoint.ToString (), e.Datagram.Length));
-		lock (Lock) {
-			inbox.Add (e.Client);
-		}
+		TcpClientState internalClient = e.Client;
+		string tcpClientKey = internalClient.TcpClient.Client.RemoteEndPoint.ToString ();
+		inbox.AddOrUpdate (tcpClientKey, internalClient, (n, o) => {
+			return internalClient;
+		});
 	}
 
 	[RPC]
@@ -140,36 +159,30 @@ public class PocoManager : MonoBehaviour
 	}
 
 	[RPC]
-	private object GetSDKVersion(List<object> param)
+	private object GetSDKVersion (List<object> param)
 	{
 		return versionCode;
 	}
 
 	void Update ()
 	{
-		List<TcpClientState> toProcess;
-		lock (Lock) {
-			toProcess = new List<TcpClientState> (inbox);
-			inbox.Clear ();
+		foreach (TcpClientState client in inbox.Values) {
+			List<string> msgs = client.Prot.swap_msgs ();
+			msgs.ForEach (delegate(string msg) {
+				var sw = new Stopwatch ();
+				sw.Start ();
+				var t0 = sw.ElapsedMilliseconds;
+				string response = rpc.HandleMessage (msg);
+				var t1 = sw.ElapsedMilliseconds;
+				byte[] bytes = prot.pack (response);
+				var t2 = sw.ElapsedMilliseconds;
+				server.Send (client.TcpClient, bytes);
+				var t3 = sw.ElapsedMilliseconds;
+				debugProfilingData ["handleRpcRequest"] = t1 - t0;
+				debugProfilingData ["packRpcResponse"] = t2 - t1;
+			});
 		}
-		if (toProcess != null) {
-			foreach (TcpClientState client in toProcess) {
-				List<string> msgs = client.Prot.swap_msgs ();
-				msgs.ForEach (delegate(string msg) {
-					var sw = new Stopwatch ();
-					sw.Start ();
-					var t0 = sw.ElapsedMilliseconds;
-					string response = rpc.HandleMessage (msg);
-					var t1 = sw.ElapsedMilliseconds;
-					byte[] bytes = prot.pack (response);
-					var t2 = sw.ElapsedMilliseconds;
-					server.Send (client.TcpClient, bytes);
-					var t3 = sw.ElapsedMilliseconds;
-					debugProfilingData ["handleRpcRequest"] = t1 - t0;
-					debugProfilingData ["packRpcResponse"] = t2 - t1;
-				});
-			}
-		}
+		inbox.Clear ();
 	}
 
 	void OnApplicationQuit ()
@@ -195,7 +208,7 @@ public class RPCParser
 			string method = data ["method"].ToString ();
 			List<object> param = null;
 			if (data.ContainsKey ("params")) {
-				param = ((JArray)(data["params"])).ToObject<List<object>>();
+				param = ((JArray)(data ["params"])).ToObject<List<object>> ();
 			}
 	
 			object idAction = null;
