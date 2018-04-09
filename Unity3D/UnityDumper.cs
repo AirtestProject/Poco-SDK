@@ -16,9 +16,9 @@ namespace Poco
 	{
 		private List<AbstractNode> children = null;
 
-		public RootNode()
+		public RootNode ()
 		{
-			children =  new List<AbstractNode> ();
+			children = new List<AbstractNode> ();
 			foreach (GameObject obj in Transform.FindObjectsOfType(typeof(GameObject))) {
 				if (obj.transform.parent == null) {
 					children.Add (new UnityNode (obj));

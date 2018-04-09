@@ -110,6 +110,7 @@ namespace TcpServer
 			this.TcpClient = tcpClient;
 			this.Buffer = buffer;
 			this.Prot = prot;
+			this.NetworkStream = tcpClient.GetStream ();
 		}
 
 		/// <summary>
@@ -127,9 +128,7 @@ namespace TcpServer
 		/// <summary>
 		/// Gets the network stream
 		/// </summary>
-		public NetworkStream NetworkStream {
-			get { return TcpClient.GetStream (); }
-		}
+		public NetworkStream NetworkStream { get; private set; }
 	}
 
 	/// <summary>
@@ -146,9 +145,9 @@ namespace TcpServer
 		//		public TcpDatagramReceivedEventArgs(TcpClient tcpClient, T datagram)
 		public TcpDatagramReceivedEventArgs (TcpClientState client, T datagram)
 		{
-			Client = client;
-			TcpClient = client.TcpClient;
-			Datagram = datagram;
+			this.Client = client;
+			this.TcpClient = client.TcpClient;
+			this.Datagram = datagram;
 		}
 
 		public TcpClientState Client { get; private set; }
@@ -257,7 +256,7 @@ namespace TcpServer
 			clients = new List<TcpClientState> ();
 
 			listener = new TcpListener (Address, Port);
-			//		listener.AllowNatTraversal(true);
+			// listener.AllowNatTraversal(true);
 		}
 
 		#endregion
