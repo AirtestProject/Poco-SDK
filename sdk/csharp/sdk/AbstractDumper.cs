@@ -26,14 +26,13 @@ namespace Poco
 
 			Dictionary<string, object> payload = node.enumerateAttrs ();
 			Dictionary<string, object> result = new Dictionary<string, object> ();
-			string name = payload.ContainsKey ("name") ? (string)payload ["name"] : (string)node.getAttr ("name");
+			string name = (string)node.getAttr ("name");
 			result.Add ("name", name);
 			result.Add ("payload", payload);
 
 			List<object> children = new List<object> ();
 			foreach (AbstractNode child in node.getChildren()) {
-				bool visible = payload.ContainsKey ("visible") ? (bool)payload ["visible"] : (bool)child.getAttr ("visible");
-				if (visible) {
+				if ((bool)child.getAttr ("visible")) {
 					children.Add (dumpHierarchyImpl (child));
 				}
 			}

@@ -1,4 +1,5 @@
-var DefaultMatcher = require('./DefaultMatcher')
+// var DefaultMatcher = require('./DefaultMatcher')
+var DefaultMatcher = window.DefaultMatcher
 
 var ISelector = function () {
 }
@@ -104,4 +105,10 @@ Selector.prototype._selectTraverse = function (cond, node, outResult, multiple, 
     return false
 }
 
-module.exports = Selector;
+try {
+    module.exports = Selector;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = Selector;
+    }
+}
