@@ -1,14 +1,12 @@
+using System;
+using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Text;
-using System;
 using UnityEngine;
-
-  // for debug only
 
 namespace TcpServer
 {
@@ -22,13 +20,13 @@ namespace TcpServer
 	public class SimpleProtocolFilter: ProtoFilter
 	{
 		/* 简单协议过滤器
-		协议按照 [有效数据字节数][有效数据] 这种协议包的格式进行打包和解包
-		[有效数据字节数]长度HEADER_SIZE字节
-		[有效数据]长度有效数据字节数字节
-		本类按照这种方式，顺序从数据流中取出数据进行拼接，一旦接收完一个完整的协议包，就会将协议包返回
-		[有效数据]字段接收到后会按照utf-8进行解码，因为在传输过程中是用utf-8进行编码的
-		所有编解码的操作在该类中完成
-		*/
+        协议按照 [有效数据字节数][有效数据] 这种协议包的格式进行打包和解包
+        [有效数据字节数]长度HEADER_SIZE字节
+        [有效数据]长度有效数据字节数字节
+        本类按照这种方式，顺序从数据流中取出数据进行拼接，一旦接收完一个完整的协议包，就会将协议包返回
+        [有效数据]字段接收到后会按照utf-8进行解码，因为在传输过程中是用utf-8进行编码的
+        所有编解码的操作在该类中完成
+        */
 
 		private byte[] buf = new byte[0];
 		private int HEADER_SIZE = 4;
@@ -88,126 +86,6 @@ namespace TcpServer
 		}
 	}
 
-	/// <summary>
-	/// Internal class to join the TCP client and buffer together
-	/// for easy management in the server
-	/// </summary>
-	public class TcpClientState
-	{
-		/// <summary>
-		/// Constructor for a new Client
-		/// </summary>
-		/// <param name="tcpClient">The TCP client</param>
-		/// <param name="buffer">The byte array buffer</param> 
-
-		public TcpClientState (TcpClient tcpClient, byte[] buffer, ProtoFilter prot)
-		{
-			if (tcpClient == null)
-				throw new ArgumentNullException ("tcpClient");
-			if (buffer == null)
-				throw new ArgumentNullException ("buffer");
-
-			this.TcpClient = tcpClient;
-			this.Buffer = buffer;
-			this.Prot = prot;
-			this.NetworkStream = tcpClient.GetStream ();
-		}
-
-		/// <summary>
-		/// Gets the TCP Client
-		/// </summary>
-		public TcpClient TcpClient { get; private set; }
-
-		/// <summary>
-		/// Gets the Buffer.
-		/// </summary>
-		public byte[] Buffer { get; private set; }
-
-		public ProtoFilter Prot { get; private set; }
-
-		/// <summary>
-		/// Gets the network stream
-		/// </summary>
-		public NetworkStream NetworkStream { get; private set; }
-	}
-
-	/// <summary>
-	/// 接收到数据报文事件参数
-	/// </summary>
-	/// <typeparam name="T">报文类型</typeparam>
-	public class TcpDatagramReceivedEventArgs<T> : EventArgs
-	{
-		/// <summary>
-		/// 接收到数据报文事件参数
-		/// </summary>
-		/// <param name="tcpClient">客户端</param>
-		/// <param name="datagram">报文</param>
-		//		public TcpDatagramReceivedEventArgs(TcpClient tcpClient, T datagram)
-		public TcpDatagramReceivedEventArgs (TcpClientState client, T datagram)
-		{
-			this.Client = client;
-			this.TcpClient = client.TcpClient;
-			this.Datagram = datagram;
-		}
-
-		public TcpClientState Client { get; private set; }
-
-		/// <summary>
-		/// 客户端
-		/// </summary>
-		public TcpClient TcpClient { get; private set; }
-
-		/// <summary>
-		/// 报文
-		/// </summary>
-		public T Datagram { get; private set; }
-	}
-
-	/// <summary>
-	/// 与客户端的连接已建立事件参数
-	/// </summary>
-	public class TcpClientConnectedEventArgs : EventArgs
-	{
-		/// <summary>
-		/// 与客户端的连接已建立事件参数
-		/// </summary>
-		/// <param name="tcpClient">客户端</param>
-		public TcpClientConnectedEventArgs (TcpClient tcpClient)
-		{
-			if (tcpClient == null)
-				throw new ArgumentNullException ("tcpClient");
-
-			this.TcpClient = tcpClient;
-		}
-
-		/// <summary>
-		/// 客户端
-		/// </summary>
-		public TcpClient TcpClient { get; private set; }
-	}
-
-	/// <summary>
-	/// 与客户端的连接已断开事件参数
-	/// </summary>
-	public class TcpClientDisconnectedEventArgs : EventArgs
-	{
-		/// <summary>
-		/// 与客户端的连接已断开事件参数
-		/// </summary>
-		/// <param name="tcpClient">客户端</param>
-		public TcpClientDisconnectedEventArgs (TcpClient tcpClient)
-		{
-			if (tcpClient == null)
-				throw new ArgumentNullException ("tcpClient");
-
-			this.TcpClient = tcpClient;
-		}
-
-		/// <summary>
-		/// 客户端
-		/// </summary>
-		public TcpClient TcpClient { get; private set; }
-	}
 
 	/// <summary>
 	/// 异步TCP服务器
@@ -216,9 +94,9 @@ namespace TcpServer
 	{
 		#region Fields
 
-		private TcpListener listener;
-		private List<TcpClientState> clients;
-		private bool disposed = false;
+		private TcpListener _listener;
+		private ConcurrentDictionary<string, TcpClientState> _clients;
+		private bool _disposed = false;
 
 		#endregion
 
@@ -249,14 +127,14 @@ namespace TcpServer
 		/// <param name="listenPort">监听的端口</param>
 		public AsyncTcpServer (IPAddress localIPAddress, int listenPort)
 		{
-			Address = localIPAddress;
-			Port = listenPort;
+			this.Address = localIPAddress;
+			this.Port = listenPort;
 			this.Encoding = Encoding.Default;
 
-			clients = new List<TcpClientState> ();
+			_clients = new ConcurrentDictionary<string, TcpClientState> ();
 
-			listener = new TcpListener (Address, Port);
-			// listener.AllowNatTraversal(true);
+			_listener = new TcpListener (Address, Port);
+			// _listener.AllowNatTraversal(true);
 		}
 
 		#endregion
@@ -293,30 +171,24 @@ namespace TcpServer
 		/// <returns>异步TCP服务器</returns>
 		public AsyncTcpServer Start ()
 		{
-			if (!IsRunning) {
-				IsRunning = true;
-				listener.Start ();
-				listener.BeginAcceptTcpClient (
-					new AsyncCallback (HandleTcpClientAccepted), listener);
-			}
-			return this;
+			return Start (10);
 		}
 
 		/// <summary>
 		/// 启动服务器
 		/// </summary>
-		/// <param name="backlog">
-		/// 服务器所允许的挂起连接序列的最大长度
-		/// </param>
+		/// <param name="backlog">服务器所允许的挂起连接序列的最大长度</param>
 		/// <returns>异步TCP服务器</returns>
 		public AsyncTcpServer Start (int backlog)
 		{
-			if (!IsRunning) {
-				IsRunning = true;
-				listener.Start (backlog);
-				listener.BeginAcceptTcpClient (
-					new AsyncCallback (HandleTcpClientAccepted), listener);
-			}
+			if (IsRunning)
+				return this;
+
+			IsRunning = true;
+
+			_listener.Start (backlog);
+			ContinueAcceptTcpClient (_listener);
+
 			return this;
 		}
 
@@ -326,19 +198,36 @@ namespace TcpServer
 		/// <returns>异步TCP服务器</returns>
 		public AsyncTcpServer Stop ()
 		{
-			if (IsRunning) {
-				IsRunning = false;
-				listener.Stop ();
+			if (!IsRunning)
+				return this;
 
-				lock (this.clients) {
-					for (int i = 0; i < this.clients.Count; i++) {
-						this.clients [i].TcpClient.Client.Disconnect (false);
-					}
-					this.clients.Clear ();
+			try {
+				_listener.Stop ();
+
+				foreach (var client in _clients.Values) {
+					client.TcpClient.Client.Disconnect (false);
 				}
-
+				_clients.Clear ();
+			} catch (ObjectDisposedException ex) {
+				Debug.LogException (ex);
+			} catch (SocketException ex) {
+				Debug.LogException (ex);
 			}
+
+			IsRunning = false;
+
 			return this;
+		}
+
+		private void ContinueAcceptTcpClient (TcpListener tcpListener)
+		{
+			try {
+				tcpListener.BeginAcceptTcpClient (new AsyncCallback (HandleTcpClientAccepted), tcpListener);
+			} catch (ObjectDisposedException ex) {
+				Debug.LogException (ex);
+			} catch (SocketException ex) {
+				Debug.LogException (ex);
+			}
 		}
 
 		#endregion
@@ -347,73 +236,86 @@ namespace TcpServer
 
 		private void HandleTcpClientAccepted (IAsyncResult ar)
 		{
-			if (IsRunning) {
-				TcpListener tcpListener = (TcpListener)ar.AsyncState;
+			if (!IsRunning)
+				return;
 
-				TcpClient tcpClient = tcpListener.EndAcceptTcpClient (ar);
-				byte[] buffer = new byte[tcpClient.ReceiveBufferSize];
+			TcpListener tcpListener = (TcpListener)ar.AsyncState;
 
-				SimpleProtocolFilter prot = new SimpleProtocolFilter ();
-				TcpClientState internalClient = new TcpClientState (tcpClient, buffer, prot);
-				lock (this.clients) {
-					this.clients.Add (internalClient);
-					RaiseClientConnected (tcpClient);
-				}
+			TcpClient tcpClient = tcpListener.EndAcceptTcpClient (ar);
+			if (!tcpClient.Connected)
+				return;
 
-				NetworkStream networkStream = internalClient.NetworkStream;
-				networkStream.BeginRead (
-					internalClient.Buffer, 
-					0, 
-					internalClient.Buffer.Length, 
-					HandleDatagramReceived, 
-					internalClient);
+			byte[] buffer = new byte[tcpClient.ReceiveBufferSize];
+			SimpleProtocolFilter prot = new SimpleProtocolFilter ();
+			TcpClientState internalClient = new TcpClientState (tcpClient, buffer, prot);
 
-				tcpListener.BeginAcceptTcpClient (
-					new AsyncCallback (HandleTcpClientAccepted), ar.AsyncState);
-			}
+			// add client connection to cache
+			string tcpClientKey = internalClient.TcpClient.Client.RemoteEndPoint.ToString ();
+			_clients.AddOrUpdate (tcpClientKey, internalClient, (n, o) => {
+				return internalClient;
+			});
+			RaiseClientConnected (tcpClient);
+
+			// begin to read data
+			NetworkStream networkStream = internalClient.NetworkStream;
+			ContinueReadBuffer (internalClient, networkStream);
+
+			// keep listening to accept next connection
+			ContinueAcceptTcpClient (tcpListener);
 		}
 
 		private void HandleDatagramReceived (IAsyncResult ar)
 		{
-			if (IsRunning) {
+			if (!IsRunning)
+				return;
+
+			try {
 				TcpClientState internalClient = (TcpClientState)ar.AsyncState;
+				if (!internalClient.TcpClient.Connected)
+					return;
+
 				NetworkStream networkStream = internalClient.NetworkStream;
 
 				int numberOfReadBytes = 0;
 				try {
+					// if the remote host has shutdown its connection, 
+					// read will immediately return with zero bytes.
 					numberOfReadBytes = networkStream.EndRead (ar);
-				} catch {
+				} catch (Exception ex) {
+					Debug.LogException (ex);
 					numberOfReadBytes = 0;
 				}
 
 				if (numberOfReadBytes == 0) {
 					// connection has been closed
-					lock (this.clients) {
-						this.clients.Remove (internalClient);
-						RaiseClientDisconnected (internalClient.TcpClient);
-						return;
-					}
+					TcpClientState internalClientToBeThrowAway;
+					string tcpClientKey = internalClient.TcpClient.Client.RemoteEndPoint.ToString ();
+					_clients.TryRemove (tcpClientKey, out internalClientToBeThrowAway);
+					RaiseClientDisconnected (internalClient.TcpClient);
+					return;
 				}
 
-				// received byte 
-				byte[] receivedBytes = new byte[numberOfReadBytes];
-				Buffer.BlockCopy (
-					internalClient.Buffer, 0, 
-					receivedBytes, 0, numberOfReadBytes);
+				// received byte and trigger event notification
+				var receivedBytes = new byte[numberOfReadBytes];
+				Array.Copy (internalClient.Buffer, 0, receivedBytes, 0, numberOfReadBytes);
 				// input bytes into protofilter
 				internalClient.Prot.input (receivedBytes);
-				// trigger event notification
-//				RaiseDatagramReceived(internalClient.TcpClient, receivedBytes);
-//				RaisePlaintextReceived(internalClient.TcpClient, receivedBytes);
 				RaiseDatagramReceived (internalClient, receivedBytes);
+				// RaisePlaintextReceived(internalClient.TcpClient, receivedBytes);
 
 				// continue listening for tcp datagram packets
-				networkStream.BeginRead (
-					internalClient.Buffer, 
-					0, 
-					internalClient.Buffer.Length, 
-					HandleDatagramReceived, 
-					internalClient);
+				ContinueReadBuffer (internalClient, networkStream);
+			} catch (InvalidOperationException ex) {
+				Debug.LogException (ex);
+			}
+		}
+
+		private void ContinueReadBuffer (TcpClientState internalClient, NetworkStream networkStream)
+		{
+			try {
+				networkStream.BeginRead (internalClient.Buffer, 0, internalClient.Buffer.Length, HandleDatagramReceived, internalClient);
+			} catch (ObjectDisposedException ex) {
+				Debug.LogException (ex);
 			}
 		}
 
@@ -425,17 +327,22 @@ namespace TcpServer
 		/// 接收到数据报文事件
 		/// </summary>
 		public event EventHandler<TcpDatagramReceivedEventArgs<byte[]>> DatagramReceived;
-
 		/// <summary>
 		/// 接收到数据报文明文事件
 		/// </summary>
-		//		public event EventHandler<TcpDatagramReceivedEventArgs<string>> PlaintextReceived;
+		public event EventHandler<TcpDatagramReceivedEventArgs<string>> PlaintextReceived;
 
-		//		private void RaiseDatagramReceived(TcpClient sender, byte[] datagram)
 		private void RaiseDatagramReceived (TcpClientState sender, byte[] datagram)
 		{
 			if (DatagramReceived != null) {
 				DatagramReceived (this, new TcpDatagramReceivedEventArgs<byte[]> (sender, datagram));
+			}
+		}
+
+		private void RaisePlaintextReceived (TcpClientState sender, byte[] datagram)
+		{
+			if (PlaintextReceived != null) {
+				PlaintextReceived (this, new TcpDatagramReceivedEventArgs<string> (sender, this.Encoding.GetString (datagram, 0, datagram.Length)));
 			}
 		}
 
@@ -466,6 +373,12 @@ namespace TcpServer
 
 		#region Send
 
+		private void GuardRunning ()
+		{
+			if (!IsRunning)
+				throw new InvalidProgramException ("This TCP server has not been started yet.");
+		}
+
 		/// <summary>
 		/// 发送报文至指定的客户端
 		/// </summary>
@@ -473,8 +386,7 @@ namespace TcpServer
 		/// <param name="datagram">报文</param>
 		public void Send (TcpClient tcpClient, byte[] datagram)
 		{
-			if (!IsRunning)
-				throw new InvalidProgramException ("This TCP server has not been started.");
+			GuardRunning ();
 
 			if (tcpClient == null)
 				throw new ArgumentNullException ("tcpClient");
@@ -482,13 +394,14 @@ namespace TcpServer
 			if (datagram == null)
 				throw new ArgumentNullException ("datagram");
 
-			tcpClient.GetStream ().BeginWrite (
-				datagram, 0, datagram.Length, HandleDatagramWritten, tcpClient);
-		}
-
-		private void HandleDatagramWritten (IAsyncResult ar)
-		{
-			((TcpClient)ar.AsyncState).GetStream ().EndWrite (ar);
+			try {
+				NetworkStream stream = tcpClient.GetStream ();
+				if (stream.CanWrite) {
+					stream.BeginWrite (datagram, 0, datagram.Length, HandleDatagramWritten, tcpClient);
+				}
+			} catch (ObjectDisposedException ex) {
+				Debug.LogException (ex);
+			}
 		}
 
 		/// <summary>
@@ -505,13 +418,12 @@ namespace TcpServer
 		/// 发送报文至所有客户端
 		/// </summary>
 		/// <param name="datagram">报文</param>
-		public void SendAll (byte[] datagram)
+		public void SendToAll (byte[] datagram)
 		{
-			if (!IsRunning)
-				throw new InvalidProgramException ("This TCP server has not been started.");
+			GuardRunning ();
 
-			for (int i = 0; i < this.clients.Count; i++) {
-				Send (this.clients [i].TcpClient, datagram);
+			foreach (var client in _clients.Values) {
+				Send (client.TcpClient, datagram);
 			}
 		}
 
@@ -519,12 +431,83 @@ namespace TcpServer
 		/// 发送报文至所有客户端
 		/// </summary>
 		/// <param name="datagram">报文</param>
-		public void SendAll (string datagram)
+		public void SendToAll (string datagram)
 		{
-			if (!IsRunning)
-				throw new InvalidProgramException ("This TCP server has not been started.");
+			GuardRunning ();
 
-			SendAll (this.Encoding.GetBytes (datagram));
+			SendToAll (this.Encoding.GetBytes (datagram));
+		}
+
+		private void HandleDatagramWritten (IAsyncResult ar)
+		{
+			try {
+				((TcpClient)ar.AsyncState).GetStream ().EndWrite (ar);
+			} catch (ObjectDisposedException ex) {
+				Debug.LogException (ex);
+			} catch (InvalidOperationException ex) {
+				Debug.LogException (ex);
+			} catch (IOException ex) {
+				Debug.LogException (ex);
+			}
+		}
+
+		/// <summary>
+		/// 发送报文至指定的客户端
+		/// </summary>
+		/// <param name="tcpClient">客户端</param>
+		/// <param name="datagram">报文</param>
+		public void SyncSend (TcpClient tcpClient, byte[] datagram)
+		{
+			GuardRunning ();
+
+			if (tcpClient == null)
+				throw new ArgumentNullException ("tcpClient");
+
+			if (datagram == null)
+				throw new ArgumentNullException ("datagram");
+
+			try {
+				NetworkStream stream = tcpClient.GetStream ();
+				if (stream.CanWrite) {
+					stream.Write (datagram, 0, datagram.Length);
+				}
+			} catch (ObjectDisposedException ex) {
+				Debug.LogException (ex);
+			}
+		}
+
+		/// <summary>
+		/// 发送报文至指定的客户端
+		/// </summary>
+		/// <param name="tcpClient">客户端</param>
+		/// <param name="datagram">报文</param>
+		public void SyncSend (TcpClient tcpClient, string datagram)
+		{
+			SyncSend (tcpClient, this.Encoding.GetBytes (datagram));
+		}
+
+		/// <summary>
+		/// 发送报文至所有客户端
+		/// </summary>
+		/// <param name="datagram">报文</param>
+		public void SyncSendToAll (byte[] datagram)
+		{
+			GuardRunning ();
+
+			foreach (var client in _clients.Values) {
+				SyncSend (client.TcpClient, datagram);
+			}
+		}
+
+		/// <summary>
+		/// 发送报文至所有客户端
+		/// </summary>
+		/// <param name="datagram">报文</param>
+		public void SyncSendToAll (string datagram)
+		{
+			GuardRunning ();
+
+			SyncSendToAll (this.Encoding.GetBytes (datagram));
 		}
 
 		#endregion
@@ -532,8 +515,7 @@ namespace TcpServer
 		#region IDisposable Members
 
 		/// <summary>
-		/// Performs application-defined tasks associated with freeing, 
-		/// releasing, or resetting unmanaged resources.
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
 		public void Dispose ()
 		{
@@ -544,25 +526,24 @@ namespace TcpServer
 		/// <summary>
 		/// Releases unmanaged and - optionally - managed resources
 		/// </summary>
-		/// <param name="disposing"><c>true</c> to release 
-		/// both managed and unmanaged resources; <c>false</c> 
-		/// to release only unmanaged resources.</param>
+		/// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; 
+		/// <c>false</c> to release only unmanaged resources.</param>
 		protected virtual void Dispose (bool disposing)
 		{
-			if (!this.disposed) {
+			if (!this._disposed) {
 				if (disposing) {
 					try {
 						Stop ();
 
-						if (listener != null) {
-							listener = null;
+						if (_listener != null) {
+							_listener = null;
 						}
 					} catch (SocketException ex) {
-						Console.Write (ex);
+						Debug.LogException (ex);
 					}
 				}
 
-				disposed = true;
+				_disposed = true;
 			}
 		}
 

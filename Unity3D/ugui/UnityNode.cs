@@ -231,7 +231,8 @@ namespace Poco
 				// ui object (rendered on screen space, other render modes may be different)
 				// use center pos for now
 				Canvas rootCanvas = GetRootCanvas(gameObject);
-				switch (rootCanvas.renderMode) {
+				RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode();
+				switch (renderMode) {
 				case RenderMode.ScreenSpaceCamera:
                         //上一个方案经过实际测试发现还有两个问题存在
                         //1.在有Canvas Scaler修改了RootCanvas的Scale的情况下坐标的抓取仍然不对，影响到了ScreenSpaceCameram模式在不同分辨率和屏幕比例下识别的兼容性。
@@ -264,8 +265,9 @@ namespace Poco
 		{
 			Canvas canvas = gameObject.GetComponentInParent<Canvas>();
 			// 如果unity版本小于unity5.5，就用递归的方式取吧，没法直接取rootCanvas
-			#if UNITY_5_3 || UNITY_5_4
-			if (canvas.isRootCanvas) {
+			// 如果有用到4.6以下版本的话就自己手动在这里添加条件吧
+			#if UNITY_4_6 || UNITY_4_7 || UNITY_4_8 || UNITY_4_9 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2 || UNITY_5_3 || UNITY_5_4
+			if (canvas && canvas.isRootCanvas) {
 				return canvas;
 			} else {
 				if (gameObject.transform.parent.gameObject != null) {
@@ -275,7 +277,13 @@ namespace Poco
 				}
 			}
 			#else
-			return canvas.isRootCanvas ? canvas : canvas.rootCanvas;
+			if (canvas && canvas.isRootCanvas) {
+				return canvas;
+			} else if (canvas) {
+				return canvas.rootCanvas;
+			} else {
+				return null;
+			}
 			#endif
 		}
 
@@ -284,7 +292,8 @@ namespace Poco
 			float[] size = { 0f, 0f };
 			if (rectTransform) {
 				Canvas rootCanvas = GetRootCanvas(gameObject);
-				switch (rootCanvas.renderMode) {
+				RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode();
+				switch (renderMode) {
 				case RenderMode.ScreenSpaceCamera:
 					Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
 					size = new float[]{ _rect.width * rootCanvas.scaleFactor / (float)Screen.width, _rect.height * rootCanvas.scaleFactor / (float)Screen.height };
