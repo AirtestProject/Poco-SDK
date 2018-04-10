@@ -25,9 +25,7 @@ public class PocoManager : MonoBehaviour
 	private RPCParser rpc = null;
 	private SimpleProtocolFilter prot = null;
 	private UnityDumper dumper = new UnityDumper ();
-	// private List<TcpClientState> inbox = new List<TcpClientState> ();
 	private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState> ();
-	private object Lock = new object ();
 
 	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long> () {
 		{ "dump", 0 },
@@ -180,9 +178,11 @@ public class PocoManager : MonoBehaviour
 				var t3 = sw.ElapsedMilliseconds;
 				debugProfilingData ["handleRpcRequest"] = t1 - t0;
 				debugProfilingData ["packRpcResponse"] = t2 - t1;
+				TcpClientState internalClientToBeThrowAway;
+				string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString();
+				inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);
 			});
 		}
-		inbox.Clear ();
 	}
 
 	void OnApplicationQuit ()
