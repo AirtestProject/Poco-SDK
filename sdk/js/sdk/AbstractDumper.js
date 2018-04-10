@@ -47,4 +47,10 @@ AbstractDumper.prototype.dumpHierarchyImpl = function (node, onlyVisibleNode) {
     return result
 }
 
-module.exports = AbstractDumper;
+try {
+    module.exports = AbstractDumper;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = AbstractDumper;
+    }
+}

@@ -9,4 +9,10 @@ IScreen.prototype.getScreen = function (width) {
     // return promisable
 }
         
-module.exports = IScreen;
+try {
+    module.exports = IScreen;
+} catch (e) {
+    if (window.module && window.module.exports) {
+        window.module.exports = IScreen;
+    }
+}
