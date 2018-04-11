@@ -179,8 +179,8 @@ public class PocoManager : MonoBehaviour
 				debugProfilingData ["handleRpcRequest"] = t1 - t0;
 				debugProfilingData ["packRpcResponse"] = t2 - t1;
 				TcpClientState internalClientToBeThrowAway;
-				string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString();
-				inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);
+				string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString ();
+				inbox.TryRemove (tcpClientKey, out internalClientToBeThrowAway);
 			});
 		}
 	}
