@@ -49,9 +49,10 @@ end
 
 function AbstractNode:setAttr(attrName, val)
     --
-    -- :retval: None
+    -- :retval: true if success else false
     
     assert(false, string.format('unable to set attributes "%s" on this node', attrName))
+    return false
 end
     
 function AbstractNode:enumerateAttrs()

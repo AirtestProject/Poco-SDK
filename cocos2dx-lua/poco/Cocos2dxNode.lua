@@ -49,13 +49,13 @@ function Node:getParent()
     if parent == nil then
         return nil
     end
-    return Node:new(parent, self.screenWidth, self.screenHeight)
+    return self:new(parent, self.screenWidth, self.screenHeight)
 end
 
 function Node:getChildren()
     local children = {}
     for _, child in ipairs(self.node:getChildren()) do
-        table.insert(children, Node:new(child, self.screenWidth, self.screenHeight))
+        table.insert(children, self:new(child, self.screenWidth, self.screenHeight))
     end
     return children
 end
@@ -166,9 +166,12 @@ function Node:getAttr(attrName)
         return self.node:getDescription()
 
     elseif attrName == 'rotation' then
-        return self.node:getRotation()
+        if self.node.getRotation ~= nil then
+            return self.node:getRotation()
+        end
+        return nil
     end
-    
+
     return AbstractNode.getAttr(self, attrName)
 end
 
@@ -176,10 +179,10 @@ function Node:setAttr(attrName, val)
     if attrName == 'text' then
         if self.node.setString then
             self.node:setString(val)
-            return
+            return true
         elseif self.node.setText then
             self.node:setText(val)
-            return
+            return true
         end
     end
     return AbstractNode.setAttr(self, attrName, val)
