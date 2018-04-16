@@ -166,10 +166,12 @@ function Node:getAttr(attrName)
         return self.node:getDescription()
 
     elseif attrName == 'rotation' then
-        if self.node.getRotation ~= nil then
-            return self.node:getRotation()
+        local rotationX, rotationY
+        if self.node.getRotationSkewX ~= nil and self.node.getRotationSkewY ~= nil then
+            rotationX, rotationY = self.node:getRotationSkewX(), self.node:getRotationSkewY()
         end
-        return nil
+        return (rotationX == rotationY) and rotationX or {rotationX, rotationY}
+        
     end
 
     return AbstractNode.getAttr(self, attrName)
