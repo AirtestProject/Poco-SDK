@@ -252,6 +252,11 @@ namespace Poco
                         pos[0] = position.x / Screen.width;
                         pos[1] = position.y / Screen.height;
                         break; 
+				case RenderMode.WorldSpace:
+					Vector2 _pos = RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, rectTransform.transform.position);
+					pos [0] = _pos.x / Screen.width;
+					pos [1] = (Screen.height - _pos.y) / Screen.height;
+					break;
 				default:
 					pos[0] = rect.center.x / (float)Screen.width;
 					pos[1] = rect.center.y / (float)Screen.height;
@@ -297,6 +302,29 @@ namespace Poco
 				case RenderMode.ScreenSpaceCamera:
 					Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
 					size = new float[]{ _rect.width * rootCanvas.scaleFactor / (float)Screen.width, _rect.height * rootCanvas.scaleFactor / (float)Screen.height };
+					break;
+				case RenderMode.WorldSpace:
+					Bounds rectBounds = RectTransformUtility.CalculateRelativeRectTransformBounds (rectTransform.transform);
+					Vector3 cen = rectBounds.center;
+					Vector3 ext = rectBounds.extents;
+					Vector2[] extentPoints = new Vector2[8] {
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z - ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z - ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z + ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z + ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z - ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z - ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z + ext.z)),
+						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z + ext.z))
+					};
+					Vector2 min = extentPoints [0];
+					Vector2 max = extentPoints [0];
+					foreach (Vector2 v in extentPoints) {
+						min = Vector2.Min (min, v);
+						max = Vector2.Max (max, v);
+					}
+					Rect rect_ = new Rect (min.x, min.y, max.x - min.x, max.y - min.y);
+					size = new float[] { rect_.width / (float)Screen.width, rect_.height / (float)Screen.height };
 					break;
 				default:
 					size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
