@@ -68,6 +68,8 @@ function Node:getAvailableAttributeNames()
         'tag',
         'desc',
         'rotation',
+        'rotation3D',
+        'skew',
     }
     for _, name in ipairs(AbstractNode.getAvailableAttributeNames(self)) do
         table.insert(ret, name)
@@ -166,10 +168,27 @@ function Node:getAttr(attrName)
         return self.node:getDescription()
 
     elseif attrName == 'rotation' then
-        if self.node.getRotation ~= nil then
-            return self.node:getRotation()
+        local rotationX, rotationY
+        if self.node.getRotationSkewX ~= nil and self.node.getRotationSkewY ~= nil then
+            rotationX, rotationY = self.node:getRotationSkewX(), self.node:getRotationSkewY()
+        end
+        return (rotationX == rotationY) and rotationX or {rotationX, rotationY}
+        
+    elseif attrName == 'rotation3D' then
+        if self.node.getRotationSkewX ~= nil and self.node.getRotationSkewY ~= nil then
+            rotationX, rotationY = self.node:getRotationSkewX(), self.node:getRotationSkewY()
+        end
+        if rotationX == rotationY and self.node.getRotation3D then
+            return self.node:getRotation3D()
         end
         return nil
+
+    elseif attrName == 'skew' then
+        if self.node.getSkewX and self.node.getSkewY then
+            return {self.node:getSkewX(), self.node:getSkewY()}
+        end
+        return nil
+
     end
 
     return AbstractNode.getAttr(self, attrName)
