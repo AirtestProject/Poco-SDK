@@ -102,13 +102,15 @@ function PocoManager:server_loop()
                 self.clients[client_sock] = ClientConnection:new(client_sock, self.DEBUG)
             else
                 local client = self.clients[v]
-                local req = client:receive()
-                if req == '' then
+                local reqs = client:receive()
+                if reqs == '' then
                     -- client is gone
                     self.clients[v] = nil
                     table.insert(removed_socks, v)
-                elseif req ~= nil then
-                    self:onRequest(req)
+                elseif reqs ~= nil then
+                    for _, req in ipairs(reqs) do
+                        self:onRequest(req)
+                    end
                 end
             end
         end
