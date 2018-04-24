@@ -303,28 +303,10 @@ namespace Poco
 					Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
 					size = new float[]{ _rect.width * rootCanvas.scaleFactor / (float)Screen.width, _rect.height * rootCanvas.scaleFactor / (float)Screen.height };
 					break;
-				case RenderMode.WorldSpace:
-					Bounds rectBounds = RectTransformUtility.CalculateRelativeRectTransformBounds (rectTransform.transform);
-					Vector3 cen = rectBounds.center;
-					Vector3 ext = rectBounds.extents;
-					Vector2[] extentPoints = new Vector2[8] {
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z - ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z - ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z + ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z + ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z - ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z - ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z + ext.z)),
-						RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z + ext.z))
-					};
-					Vector2 min = extentPoints [0];
-					Vector2 max = extentPoints [0];
-					foreach (Vector2 v in extentPoints) {
-						min = Vector2.Min (min, v);
-						max = Vector2.Max (max, v);
-					}
-					Rect rect_ = new Rect (min.x, min.y, max.x - min.x, max.y - min.y);
-					size = new float[] { rect_.width / (float)Screen.width, rect_.height / (float)Screen.height };
+				case RenderMode.WorldSpace:		
+					Rect rect_ = rectTransform.rect;
+					RectTransform canvasTransform = rootCanvas.GetComponent<RectTransform> ();
+					size = new float[] {rect_.width / canvasTransform.rect.width, rect_.height / canvasTransform.rect.height};
 					break;
 				default:
 					size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
@@ -339,7 +321,12 @@ namespace Poco
 		private float[] GameObjectAnchorInScreen (Renderer renderer, Rect rect, Vector3 objectPos)
 		{
 			float[] defaultValue = { 0.5f, 0.5f };
-
+			if (rectTransform) {
+				Vector2 data = rectTransform.pivot;
+				defaultValue [0] = data [0];
+				defaultValue [1] = 1 - data [1];
+				return defaultValue;
+			}
 			if (!renderer) { //<Modified> some object do not have renderer
 				return defaultValue;
 			}
