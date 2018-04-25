@@ -28,7 +28,13 @@ function import(moduleName, currentModuleName)
 end
 
 local cc = _G.cc or require('cc')
-local socket = _G.socket or require('socket')
+local socket = nil
+xpcall(function() 
+    socket = _G.socket or require('socket.core')
+end, function()
+    -- cocos2dx-lua 里的兼容写法
+    socket = cc.exports.socket
+end)
 local VERSION = import('.POCO_SDK_VERSION')
 local Dumper = import('.Cocos2dxFrozenDumper')
 local Screen = import('.Cocos2dxScreen')
