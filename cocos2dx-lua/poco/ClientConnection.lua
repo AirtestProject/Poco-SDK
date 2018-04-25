@@ -27,7 +27,13 @@ function import(moduleName, currentModuleName)
     return require(moduleFullName)
 end
 
-local socket = _G.socket or require('socket')
+local socket = nil
+xpcall(function() 
+    socket = _G.socket or require('socket.core')
+end, function()
+    -- cocos2dx-lua 里的兼容写法
+    socket = cc.exports.socket
+end)
 local json = import('.support.dkjson')  -- 一定要用这个模块不然字符串发送有问题
 local struct = _G.struct or import('.support.struct')
 

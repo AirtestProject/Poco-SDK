@@ -175,6 +175,7 @@ function Node:getAttr(attrName)
         return rotationX or rotationY
 
     elseif attrName == 'rotation3D' then
+        local rotationX, rotationY
         if self.node.getRotationSkewX ~= nil and self.node.getRotationSkewY ~= nil then
             rotationX, rotationY = self.node:getRotationSkewX(), self.node:getRotationSkewY()
         end
