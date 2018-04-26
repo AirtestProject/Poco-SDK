@@ -5,7 +5,7 @@ function IDumper:getRoot()
     -- :rettype: support.poco.sdk.AbstractNode
 end
 
-function IDumper:dumpHierarchy() 
+function IDumper:dumpHierarchy(onlyVisibleNode) 
     -- :rettype: dict or NoneType
 end
 
@@ -14,8 +14,11 @@ AbstractDumper.__index = AbstractDumper
 setmetatable(AbstractDumper, IDumper)
 
 
-function AbstractDumper:dumpHierarchy() 
-    return self:dumpHierarchyImpl(self:getRoot())
+function AbstractDumper:dumpHierarchy(onlyVisibleNode)
+    if onlyVisibleNode == nil then
+        onlyVisibleNode = true
+    end
+    return self:dumpHierarchyImpl(self:getRoot(), onlyVisibleNode)
 end
 
 
@@ -31,7 +34,7 @@ function AbstractDumper:dumpHierarchyImpl(node, onlyVisibleNode)
     local result = {}
     local children = {}
     for _, child in ipairs(node:getChildren()) do
-        if not onlyVisibleNode or (payload['visible'] or child:getAttr('visible')) then
+        if not onlyVisibleNode or child:getAttr('visible') then
             table.insert(children, self:dumpHierarchyImpl(child, onlyVisibleNode))
         end
     end
