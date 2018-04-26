@@ -6,7 +6,7 @@ IDumper.prototype.getRoot = function () {
     // :rettype: support.poco.sdk.AbstractNode
 }
 
-IDumper.prototype.dumpHierarchy = function () {
+IDumper.prototype.dumpHierarchy = function (onlyVisibleNode) {
     // :rettype: dict or NoneType
 }
 
@@ -15,8 +15,11 @@ var AbstractDumper = function () {
 }
 AbstractDumper.prototype = Object.create(IDumper.prototype)
 
-AbstractDumper.prototype.dumpHierarchy = function () {
-    return this.dumpHierarchyImpl(this.getRoot())
+AbstractDumper.prototype.dumpHierarchy = function (onlyVisibleNode) {
+    if (onlyVisibleNode === undefined) {
+        onlyVisibleNode = true
+    }
+    return this.dumpHierarchyImpl(this.getRoot(), onlyVisibleNode)
 }
 
 AbstractDumper.prototype.dumpHierarchyImpl = function (node, onlyVisibleNode) {
@@ -33,7 +36,7 @@ AbstractDumper.prototype.dumpHierarchyImpl = function (node, onlyVisibleNode) {
     var nodeChildren = node.getChildren()
     for (var i in nodeChildren) {
         var child = nodeChildren[i]
-        if (!onlyVisibleNode || (payload['visible'] || child.getAttr('visible'))) {
+        if (!onlyVisibleNode || child.getAttr('visible')) {
             children.push(this.dumpHierarchyImpl(child, onlyVisibleNode))
         }
     }

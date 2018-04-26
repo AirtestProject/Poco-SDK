@@ -55,7 +55,12 @@ PocoManager.clients = {}
 -- rpc 方法统一才是Pascal命名方式，其实是为了跟unity3d里使用的poco-sdk命名相同
 local dispatcher = {
     GetSDKVersion = function() return VERSION end,
-    Dump = function() return Dumper:dumpHierarchy() end,
+    Dump = function(onlyVisibleNode) 
+        if onlyVisibleNode == nil then
+            onlyVisibleNode = true
+        end
+        return Dumper:dumpHierarchy(onlyVisibleNode)
+    end,
     Screenshot = function(width)
         width = width or 720
         return Screen:getScreen(width) 
