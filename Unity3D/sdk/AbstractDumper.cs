@@ -15,10 +15,14 @@ namespace Poco
 
 		public Dictionary<string, object> dumpHierarchy ()
 		{
-			return dumpHierarchyImpl (getRoot ());
+			return dumpHierarchyImpl (getRoot (), true);
+		}
+		public Dictionary<string, object> dumpHierarchy (bool onlyVisibleNode)
+		{
+			return dumpHierarchyImpl (getRoot (), onlyVisibleNode);
 		}
 
-		private Dictionary<string, object> dumpHierarchyImpl (AbstractNode node)
+		private Dictionary<string, object> dumpHierarchyImpl (AbstractNode node, bool onlyVisibleNode)
 		{
 			if (node == null) {
 				return null;
@@ -32,8 +36,8 @@ namespace Poco
 
 			List<object> children = new List<object> ();
 			foreach (AbstractNode child in node.getChildren()) {
-				if ((bool)child.getAttr ("visible")) {
-					children.Add (dumpHierarchyImpl (child));
+				if (!onlyVisibleNode || (bool)child.getAttr ("visible")) {
+					children.Add (dumpHierarchyImpl (child, onlyVisibleNode));
 				}
 			}
 			if (children.Count > 0) {
@@ -53,6 +57,7 @@ namespace Poco
 		AbstractNode getRoot ();
 
 		Dictionary<string, object> dumpHierarchy ();
+		Dictionary<string, object> dumpHierarchy (bool onlyVisibleNode);
 
 		List<float> getPortSize ();
 	}

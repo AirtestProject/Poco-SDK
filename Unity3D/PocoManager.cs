@@ -17,7 +17,7 @@ using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
-	public const int versionCode = 2;
+	public const int versionCode = 3;
 
 	public int port = 5001;
 	private bool mRunning;
@@ -103,9 +103,13 @@ public class PocoManager : MonoBehaviour
 	[RPC]
 	private object Dump (List<object> param)
 	{
+		var onlyVisibleNode = true;
+		if (param.Length > 0) {
+			onlyVisibleNode = (bool) param[0];
+		}
 		var sw = new Stopwatch ();
 		sw.Start ();
-		var h = dumper.dumpHierarchy ();
+		var h = dumper.dumpHierarchy (onlyVisibleNode);
 		debugProfilingData ["dump"] = sw.ElapsedMilliseconds;
 		return h;
 	}
