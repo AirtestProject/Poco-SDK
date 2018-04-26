@@ -104,7 +104,7 @@ public class PocoManager : MonoBehaviour
 	private object Dump (List<object> param)
 	{
 		var onlyVisibleNode = true;
-		if (param.Length > 0) {
+		if (param.Count > 0) {
 			onlyVisibleNode = (bool) param[0];
 		}
 		var sw = new Stopwatch ();
