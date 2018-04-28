@@ -29,11 +29,14 @@ end
 
 local DefaultMatcher = import('.DefaultMatcher')
 
-local function _table_append(t1, t2)
-    for _, v in ipairs(t2) do
-        table.insert(t1, v)
+
+local function _table_contains(t, v)
+    for _, tv in ipairs(t) do
+        if tv == v then
+            return true
+        end
     end
-    return t1
+    return false
 end
 
 
@@ -78,7 +81,12 @@ function Selector:selectImpl(cond, multiple, root, maxDepth, onlyVisibleNode, in
                     _maxDepth = 1
                 end
                 -- 按路径进行遍历一定要multiple为true才不会漏掉
-                _table_append(midResult, self:selectImpl(arg, true, parent, _maxDepth, onlyVisibleNode, false))
+                _res = self:selectImpl(arg, true, parent, _maxDepth, onlyVisibleNode, false)
+                for _, r in ipairs(_res) do
+                    if not _table_contains(midResult, r) then
+                        table.insert(midResult, r)
+                    end
+                end
             end
             parents = midResult
         end
@@ -88,7 +96,12 @@ function Selector:selectImpl(cond, multiple, root, maxDepth, onlyVisibleNode, in
         local query1, query2 = unpack(args)
         local result1 = self:selectImpl(query1, multiple, root, maxDepth, onlyVisibleNode, includeRoot)
         for _, n in ipairs(result1) do
-            _table_append(result, self:selectImpl(query2, multiple, n:getParent(), 1, onlyVisibleNode, includeRoot))
+            sibling_result = self:selectImpl(query2, multiple, n:getParent(), 1, onlyVisibleNode, includeRoot)
+            for _, r in ipairs(sibling_result) do
+                if not _table_contains(result, r) then
+                    table.insert(result, r)
+                end
+            end
         end
     elseif op == 'index' then
         local cond, i = unpack(args)
@@ -108,7 +121,9 @@ function Selector:_selectTraverse(cond, node, outResult, multiple, maxDepth, onl
 
     if self.matcher:match(cond, node) then
         if includeRoot then
-            table.insert(outResult, node)
+            if not _table_contains(outResult, node) then
+                table.insert(outResult, node)
+            end
             if not multiple then
                 return true
             end
