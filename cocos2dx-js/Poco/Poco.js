@@ -32,7 +32,7 @@ PocoManager.prototype.init_server = function() {
         this.server = new WebSocketServer(this.port);
 
         this.server.onServerUp = function(evt) {
-            console.log("Network onServerUp...", evt);
+            console.log("Network onServerUp...");
             console.log(JSON.stringify(evt));
         };
 
@@ -45,7 +45,8 @@ PocoManager.prototype.init_server = function() {
         };
 
         this.server.onMessage = function(evt) {
-            console.log('Network onMessage...', evt.data);
+            console.log('Network onMessage...');
+            console.log(evt.data);
             var data = JSON.parse(evt.data);
             var method = data.method
             var params = data.params
@@ -56,18 +57,19 @@ PocoManager.prototype.init_server = function() {
                 "jsonrpc": data.jsonrpc,
                 "result": result,
             }
-            console.log(ret)
             ret = JSON.stringify(ret)
-            console.log(ret)
+            console.log(ret);
             this.server.send(evt.socketId, ret)
         };
 
         this.server.onDisconnection = function(evt) {
             console.log('Network onDisconnection...');  
+            console.log(JSON.stringify(evt));
         };
 
         this.server.onError = function(evt) {
             console.log('Network onerror...');
+            console.log(JSON.stringify(evt));
         };
 
         this.server.onServerUp = this.server.onServerUp.bind(this)

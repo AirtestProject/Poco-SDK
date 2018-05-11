@@ -1,4 +1,4 @@
-var POCO_SDK_VERSION = '1.0.0'
+var POCO_SDK_VERSION = '1.0.1'
 
 try {
     module.exports = POCO_SDK_VERSION;
