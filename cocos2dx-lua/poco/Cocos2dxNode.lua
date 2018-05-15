@@ -130,9 +130,12 @@ function Node:getAttr(attrName)
     elseif attrName == 'size' then
         -- 转换成归一化坐标系
         local size = self.node:getContentSize()
-        size.width = size.width / self.screenWidth
-        size.height = size.height / self.screenHeight
-        return {size.width, size.height}
+        -- 有些版本的engine对于某类特殊节点会没有这个值，所以要判断
+        if size ~= nil then
+            size.width = size.width / self.screenWidth
+            size.height = size.height / self.screenHeight
+            return {size.width, size.height}
+        end
 
     elseif attrName == 'scale' then
         return {self.node:getScaleX(), self.node:getScaleY()}
