@@ -2,17 +2,19 @@ local Attributor = {}
 Attributor.__index = Attributor
 
 function Attributor:getAttr(node, attrName)
+    local node_ = node
     if node.__isPocoNodeWrapper__ == nil then
-        node = node[1]
+        node_ = node[1]
     end
-    return node:getAttr(attrName)
+    return node_:getAttr(attrName)
 end
 
 function Attributor:setAttr(node, attrName, attrVal)
+    local node_ = node
     if node.__isPocoNodeWrapper__ == nil then
-        node = node[1]
+        node_ = node[1]
     end
-    node:setAttr(attrName, attrVal)
+    node_:setAttr(attrName, attrVal)
 end
 
 return Attributor
