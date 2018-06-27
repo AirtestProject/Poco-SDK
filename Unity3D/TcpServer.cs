@@ -171,6 +171,7 @@ namespace TcpServer
 		/// <returns>异步TCP服务器</returns>
 		public AsyncTcpServer Start ()
 		{
+            Debug.Log("start server");
 			return Start (10);
 		}
 

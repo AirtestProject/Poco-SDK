@@ -34,9 +34,10 @@ namespace Poco
 		private Rect rect;
 		private Vector2 objectPos;
 		private List<string> components;
+        private Vector3 previousMousePosition = Vector3.zero;
 
 
-		public UnityNode (GameObject obj)
+        public UnityNode (GameObject obj)
 		{
 			gameObject = obj;
 			renderer = gameObject.GetComponent<Renderer> ();
@@ -51,7 +52,7 @@ namespace Poco
 			GameObject parentObj = gameObject.transform.parent.gameObject;
 			return new UnityNode (parentObj);
 		}
-
+        
 		public override List<AbstractNode> getChildren ()
 		{
 			List<AbstractNode> children = new List<AbstractNode> ();
@@ -97,6 +98,13 @@ namespace Poco
 			}
 		}
 
+
+        public void Update()
+        {
+            Debug.Log("Test");
+            /// have a list with methods and foreach execute
+        }
+
 		public override Dictionary<string, object> enumerateAttrs ()
 		{
 			Dictionary<string, object> payload = GetPayload ();
@@ -109,7 +117,36 @@ namespace Poco
 			return ret;
 		}
 
-		private Dictionary<string, object> GetPayload ()
+        public static void RotateCamera(Vector2 mousePosition, float rotationSpeed = 0.125f)
+        {
+            var cameraRetrieved = Camera.main;
+            Vector3 previousMousePosition = Camera.main.transform.rotation.eulerAngles;
+            float cameraTilt = (-360f + Camera.main.transform.rotation.eulerAngles.x);
+            float cameraTurn = Camera.main.transform.rotation.eulerAngles.y;
+            cameraTilt += -(mousePosition.y - previousMousePosition.y);
+            cameraTurn += (mousePosition.x - previousMousePosition.x) ;
+
+            var targetRotation = Quaternion.Euler(cameraTilt, cameraTurn, 0);
+            var previousRotation = Camera.main.transform.rotation;
+
+            Camera.main.transform.localRotation = Quaternion.Slerp(previousRotation, targetRotation, Time.deltaTime* rotationSpeed);
+        }
+
+        public static bool LookAtMe(GameObject go, float rotationSpeed = 0.125f)
+        {
+            Debug.Log("looking");
+            if (null == go)
+            {
+                return false;
+            }
+
+            Quaternion toRotation = Quaternion.FromToRotation(Camera.main.transform.position, go.transform.position);
+            Camera.main.transform.rotation = Quaternion.Slerp(Camera.main.transform.rotation, toRotation, Time.deltaTime * rotationSpeed);
+            // Camera.main.transform.LookAt(go.transform);
+            return true;
+        }
+
+        private Dictionary<string, object> GetPayload ()
 		{
 			Dictionary<string, object> payload = new Dictionary<string, object> () {
 				{ "name", gameObject.name },
