@@ -20,7 +20,9 @@ function PocoManager(port) {
     this.poco = new Dumper();
     this.rpc_dispacher = {
         "getSDKVersion": function() { return POCO_SDK_VERSION },
+        "GetSDKVersion": function() { return POCO_SDK_VERSION },  // for the compatibility
         "dump": this.poco.dumpHierarchy,
+        "Dump": this.poco.dumpHierarchy,  // for the compatibility
         "test": function() { return "test" },
     }
     this.init_server();
@@ -47,19 +49,14 @@ PocoManager.prototype.init_server = function() {
         this.server.onMessage = function(evt) {
             console.log('Network onMessage...');
             console.log(evt.data);
-            var data = JSON.parse(evt.data);
-            var method = data.method
-            var params = data.params
-            var func = this.rpc_dispacher[method]
-            var result = func.apply(this.poco, params)
-            var ret = {
-                "id": data.id,
-                "jsonrpc": data.jsonrpc,
-                "result": result,
+            try {
+                var req = JSON.parse(evt.data);
+                var res = this.handle_request(req)
+                var sres = JSON.stringify(res)
+                this.server.send(evt.socketId, sres)
+            } catch (error) {
+                console.log("[Poco] error when handling rpc request. req=" + evt.data + '\nerror message: ' + error.stack)
             }
-            ret = JSON.stringify(ret)
-            console.log(ret);
-            this.server.send(evt.socketId, ret)
         };
 
         this.server.onDisconnection = function(evt) {
@@ -81,6 +78,30 @@ PocoManager.prototype.init_server = function() {
     } catch(e){
         console.log(err.stack + "\n" + err.message);
     }
+}
+
+PocoManager.prototype.handle_request = function(req) {
+    var ret = {
+        id: req.id,
+        jsonrpc: req.jsonrpc,
+        result: undefined,
+        error: undefined,
+    }
+    var method = req.method
+    var func = this.rpc_dispacher[method]
+    if (!func) {
+        ret.error = {message: 'No such rpc method "' + method + '", reqid: ' + req.id}
+    } else {
+        var params = req.params
+        try {
+            var result = func.apply(this.poco, params)
+            ret.result = result
+        } catch (error) {
+            ret.error = {message: error.stack}
+        }
+    }
+    console.log(ret);
+    return ret
 }
 
 
