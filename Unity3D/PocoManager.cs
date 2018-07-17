@@ -21,7 +21,8 @@ public class PocoManager : MonoBehaviour
     private SimpleProtocolFilter prot = null;
     private UnityDumper dumper = new UnityDumper();
     private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
-    private static List<Action> commands = new List<Action>();
+    private static Queue<Action> commands = new Queue<Action>();
+    private static Quaternion rotation = Quaternion.identity;
 
     private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
         { "dump", 0 },
@@ -63,6 +64,7 @@ public class PocoManager : MonoBehaviour
             new EventHandler<TcpDatagramReceivedEventArgs<byte[]>>(server_Received);
         server.Start();
         Debug.Log("Tcp server started");
+        commands.Clear();
     }
 
     static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
@@ -73,21 +75,10 @@ public class PocoManager : MonoBehaviour
 
     static void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
     {
-        clear_command_list();
-
         Debug.Log(string.Format("TCP client {0} has disconnected.",
            e.TcpClient.Client.RemoteEndPoint.ToString()));
     }
 
-    private static void clear_command_list()
-    {
-        lock (commands)
-        {
-            foreach (var command in commands.ToArray())
-                commands.Remove(command);
-        }
-        commands = new List<Action>();
-    }
 
     private void server_Received(object sender, TcpDatagramReceivedEventArgs<byte[]> e)
     {
@@ -106,27 +97,44 @@ public class PocoManager : MonoBehaviour
     {
         var xRotation = Convert.ToSingle(param[0]);
         var yRotation = Convert.ToSingle(param[1]);
+        var zRotation = Convert.ToSingle(param[2]);
         float speed = 0f;
         if (param.Count > 1)
-            speed = Convert.ToSingle(param[2]);
-        Debug.Log(xRotation);
-        Debug.Log(yRotation);
-        Vector2 mousePosition = new Vector2(xRotation, yRotation);
-        rotate(mousePosition, speed);
+            speed = Convert.ToSingle(param[3]);
+        Vector3 mousePosition = new Vector3(xRotation, yRotation, zRotation);
+
         lock (commands)
         {
-            commands.Add(() => RotateCamera(param));
+            var currentRotation = Camera.main.transform.rotation;
+            commands.Enqueue(() => rotate(currentRotation, mousePosition, speed));
         }
+
         return true;
     }
 
-    static private void rotate(Vector2 go, float speed)
+    static private void rotate(Quaternion originalRotation, Vector3 mousePosition, float speed)
     {
         Debug.Log("rotating");
         if (speed != 0)
-            UnityNode.RotateCamera(go, speed);
+        {
+            if (!UnityNode.RotateCamera(originalRotation, mousePosition, speed))
+            {
+                lock (commands)
+                {
+                    commands.Dequeue();
+                }
+            }
+        }
         else
-            UnityNode.RotateCamera(go);
+        {
+            if (!UnityNode.RotateCamera(originalRotation, mousePosition))
+            {
+                lock (commands)
+                {
+                    commands.Dequeue();
+                }
+            }
+        }
     }
 
     [RPC]
@@ -139,14 +147,9 @@ public class PocoManager : MonoBehaviour
         {
             if (go.name.Equals(param[0]))
             {
-                //  bool exitCode = UnityNode.LookAtMe(go);
                 lock (commands)
                 {
-                    Debug.Log("command saved");
-                    commands.Add(() => lookAt(go, speed));
-                   // clear_command_list();
-                    //commands.Add(() => LookAtObject(param)); -- si dejo esto se anade cada vez, funciona pero solo con el primer elemento (y si no borro la lista antes)
-                    lookAt(go, speed);
+                    commands.Enqueue(() => lookAt(go, speed));
                 }
                 return true;
             }
@@ -158,10 +161,28 @@ public class PocoManager : MonoBehaviour
     static private void lookAt(GameObject go, float speed)
     {
         Debug.Log("looking at " + go.name);
+
         if (speed != 0)
-            UnityNode.LookAtMe(go, speed);
+        {
+            if (!UnityNode.LookAtMe(go, speed))
+            {
+                lock (commands)
+                {
+                    commands.Dequeue();
+                }
+            }
+        }
         else
-            UnityNode.LookAtMe(go);
+        {
+            if (!UnityNode.LookAtMe(go))
+            {
+                lock (commands)
+                {
+                    commands.Dequeue();
+                }
+            }
+        }
+
     }
 
     [RPC]
@@ -203,7 +224,6 @@ public class PocoManager : MonoBehaviour
 
     public void stopListening()
     {
-        clear_command_list();
         mRunning = false;
         server.Stop();
     }
@@ -237,6 +257,10 @@ public class PocoManager : MonoBehaviour
 
     void Update()
     {
+        // save last position and set at the beginning and end?
+        //rotation = Camera.main.transform.rotation;
+        Camera.main.transform.rotation = rotation;
+
         foreach (TcpClientState client in inbox.Values)
         {
             List<string> msgs = client.Prot.swap_msgs();
@@ -259,30 +283,16 @@ public class PocoManager : MonoBehaviour
             });
         }
 
-        lock (commands)
+        if (null != commands && commands.Count > 0)
         {
-
-            if (null != commands && commands.Count > 0)
-            {
-                foreach (Action command in commands.ToArray())
-                {
-                    if (null != commands && commands.Count > 0)
-                    {
-
-                        if (null != command)
-                        {
-                            Debug.Log("command executed ");
-                            command();
-                        }
-                    }
-
-                }
-            }
-        
+            Debug.Log("command executed " + commands.Count);
+            commands.Peek()();
+            rotation = Camera.main.transform.rotation;
         }
+
     }
 
-            void OnApplicationQuit()
+    void OnApplicationQuit()
     { // stop listening thread
         stopListening();
     }
