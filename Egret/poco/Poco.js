@@ -18,6 +18,7 @@ function PocoManager(stage, port) {
     this.poco = new Dumper(stage);
     this.screen = new Screen(stage);
 
+    
     // this.poco.dumpHierarchy();
     // console.log(this.poco)
     this.rpc_dispacher = {
@@ -28,6 +29,7 @@ function PocoManager(stage, port) {
         "test": function () { return "test" },
     }
     console.log('registered rpc methods.', this.rpc_dispacher)
+    
     this.init_server();
 }
 

@@ -12,7 +12,11 @@ var Dumper = function (root) {
 Dumper.prototype = Object.create(AbstractDumper.prototype)
 
 Dumper.prototype.getRoot = function () { 
-    return new Node(this.root, this.root.width, this.root.height)
+    var x=document.getElementsByClassName("egret-player")
+    var canvas=x[0].childNodes[1]
+    // console.log(x[0],canvas)
+    console.log(x[0].clientWidth, x[0].clientHeight,canvas.clientWidth,canvas.clientHeight,this.root.width,this.root.height)
+    return new Node(this.root, x[0].clientWidth, x[0].clientHeight,canvas.clientWidth,canvas.clientHeight,this.root.width,this.root.height)
 }
 
 try {
