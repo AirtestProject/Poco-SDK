@@ -3,15 +3,11 @@
 var AbstractNode = window.AbstractNode
 
 
-var Node = function (node, screenWidth, screenHeight,canvasWidth,canvasHeight,gameWidth,gameHeight) {
+var Node = function (node, screenWidth, screenHeight) {
     AbstractNode.call(this)
     this.node = node
     this.screenWidth = screenWidth
     this.screenHeight = screenHeight
-    this.canvasWidth=canvasWidth
-    this.canvasHeight=canvasHeight
-    this.gameWidth=gameWidth
-    this.gameHeight=gameHeight
 }
 Node.prototype = Object.create(AbstractNode.prototype)
 
@@ -20,7 +16,7 @@ Node.prototype.getParent = function () {
     if (!parent) {
         return null
     }
-    return new Node(parent, this.screenWidth, this.screenHeight,this.canvasWidth,this.canvasHeight,this.gameWidth,this.gameHeight)
+    return new Node(parent, this.screenWidth, this.screenHeight)
 }
 
 Node.prototype.getChildren = function () {
@@ -30,7 +26,7 @@ Node.prototype.getChildren = function () {
         children = []
         for (var i in nodeChildren) {
             var child = nodeChildren[i]
-            children.push(new Node(child, this.screenWidth, this.screenHeight,this.canvasWidth,this.canvasHeight,this.gameWidth,this.gameHeight))
+            children.push(new Node(child, this.screenWidth, this.screenHeight))
         }
     }
     return children
@@ -82,29 +78,28 @@ Node.prototype.getAttr = function (attrName) {
         var x = 0
         var y = 0
 
-        var canvas2Left=(this.screenWidth-this.canvasWidth)/(2*this.screenWidth)
-        var canvas2Top=(this.screenHeight-this.canvasHeight)/(2*this.screenHeight)
         var point = this.node.localToGlobal();
         if (this.node.__class__.toString().startsWith("eui")) {
             var w = this.node.width
             var h = this.node.height
-            x = ((point.x + w / 2) * this.canvasWidth) / (this.screenWidth * this.gameWidth) + canvas2Left;
-            y = ((point.y + h / 2) * this.canvasHeight)/ (this.screenHeight * this.gameHeight) +canvas2Top;
+            x = (point.x + w / 2) / this.screenWidth 
+            y = (point.y + h / 2) / this.screenHeight
         } else {
-            x =((point.x) * this.canvasWidth) / (this.screenWidth * this.gameWidth) + canvas2Left;
-            y =((point.y) * this.canvasHeight)/ (this.screenHeight * this.gameHeight) +canvas2Top;
+            x = point.x / this.screenWidth 
+            y = point.y / this.screenHeight
         }
+
         return [x, y]
     }
     else if (attrName === 'size') {
         // 转换成归一化坐标系
         var width = 0;
         var height = 0;
-        
-        width = this.node.width * this.canvasWidth
-        height = this.node.height * this.canvasHeight
-        width /= (this.screenWidth * this.gameWidth)
-        height /= (this.screenHeight * this.gameHeight)
+
+        width = this.node.width
+        height = this.node.height
+        width /= this.screenWidth
+        height /= this.screenHeight
         // console.log([width, height],"    ",this.node.__class__,this.node.width,this.screenWidth)
         return [width, height]
     }

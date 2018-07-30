@@ -18,7 +18,9 @@ function PocoManager(stage, port) {
     this.poco = new Dumper(stage);
     this.screen = new Screen(stage);
 
-    
+    console.log(document.getElementsByClassName("canvas"),"aaaaaaaaaa")
+
+
     // this.poco.dumpHierarchy();
     // console.log(this.poco)
     this.rpc_dispacher = {
