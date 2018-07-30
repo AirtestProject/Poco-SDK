@@ -17,21 +17,15 @@ function PocoManager(stage, port) {
     this.port = port || PORT
     this.poco = new Dumper(stage);
     this.screen = new Screen(stage);
-
-    console.log(document.getElementsByClassName("canvas"),"aaaaaaaaaa")
-
-
-    // this.poco.dumpHierarchy();
-    // console.log(this.poco)
     this.rpc_dispacher = {
-        "GetSDKVersion": function () { return POCO_SDK_VERSION }, 
-        "Dump": this.poco.dumpHierarchy.bind(this.poco), 
+        "GetSDKVersion": function () { return POCO_SDK_VERSION },
+        "Dump": this.poco.dumpHierarchy.bind(this.poco),
         "Screenshot": this.screen.getScreen.bind(this.screen),
         "GetScreenSize": this.screen.getPortSize.bind(this.screen),
         "test": function () { return "test" },
     }
     console.log('registered rpc methods.', this.rpc_dispacher)
-    
+
     this.init_server();
 }
 
@@ -47,7 +41,7 @@ PocoManager.prototype.init_server = function () {
         this.server.onmessage = function (evt) {
             console.log('Network onMessage...');
             var fr = new FileReader();
-            fr.onloadend = function(e) {
+            fr.onloadend = function (e) {
                 var text = e.srcElement.result;
                 console.log(text);
 

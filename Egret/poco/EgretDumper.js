@@ -11,8 +11,7 @@ var Dumper = function (root) {
 
 Dumper.prototype = Object.create(AbstractDumper.prototype)
 
-Dumper.prototype.getRoot = function () { 
-    console.log(111)
+Dumper.prototype.getRoot = function () {
     return new Node(this.root, this.root.width, this.root.height)
 }
 
