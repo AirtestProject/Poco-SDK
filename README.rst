@@ -36,4 +36,7 @@ We welcome everyone to implement other 3rd party platforms/engines for poco-sdk.
 Acknowledgement
 ---------------
 
-[Egret](https://www.egret.com/en/): by [github.com/szzg](https://github.com/szzg)
+`Egret`_: By `github.com/szzg <github_com_szzg>`_
+
+.. _Egret: https://www.egret.com/en/
+.. _github_com_szzg: https://github.com/szzg
