@@ -27,3 +27,13 @@ The title format will be ``[<EngineName>-sdk] xxx``. e.g. ``[cocos2dx-lua sdk] X
 
 .. _Integration Guide: http://poco.readthedocs.io/en/latest/source/doc/integration.html
 .. _open an issue: https://github.com/AirtestProject/Poco-SDK/issues/new
+
+Contribution
+------------
+
+We welcome everyone to implement other 3rd party platforms/engines for poco-sdk.
+
+Acknowledgement
+---------------
+
+[Egret](https://www.egret.com/en/): by [github.com/szzg](https://github.com/szzg)
