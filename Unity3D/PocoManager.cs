@@ -4,6 +4,7 @@ using Poco;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using TcpServer;
@@ -13,7 +14,7 @@ using Debug = UnityEngine.Debug;
 public class PocoManager : MonoBehaviour
 {
     public const int versionCode = 3;
-
+    float i = 0f;
     public int port = 5001;
     private bool mRunning;
     public AsyncTcpServer server = null;
@@ -22,7 +23,16 @@ public class PocoManager : MonoBehaviour
     private UnityDumper dumper = new UnityDumper();
     private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
     private static Queue<Action> commands = new Queue<Action>();
-    private static Quaternion rotation = Quaternion.identity;
+
+    [DllImport("user32.dll")]
+    private static extern void mouse_event(int dwFlags, float dx, float dy, int dwData, int dwExtraInfo);
+
+    [Flags]
+    public enum MouseEventFlags
+    {
+        LeftDown = 0x00000002,
+        LeftUp = 0x00000004
+    }
 
     private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
         { "dump", 0 },
@@ -43,8 +53,9 @@ public class PocoManager : MonoBehaviour
 
         prot = new SimpleProtocolFilter();
         rpc = new RPCParser();
-        rpc.addRpcMethod("RotateCamera", RotateCamera);
-        rpc.addRpcMethod("LookAtObject", LookAtObject);
+        rpc.addRpcMethod("checkIfUnityFinished", IsQueueEmpty);
+        rpc.addRpcMethod("RotateObject", RotateObject);
+        rpc.addRpcMethod("ObjectLookAt", ObjectLookAt);
         rpc.addRpcMethod("Screenshot", Screenshot);
         rpc.addRpcMethod("GetScreenSize", GetScreenSize);
         rpc.addRpcMethod("Dump", Dump);
@@ -67,6 +78,19 @@ public class PocoManager : MonoBehaviour
         commands.Clear();
     }
 
+
+    [RPC]
+    public static object IsQueueEmpty(List<object> param)
+    {
+        Debug.Log("Checking queue");
+        if (commands != null && commands.Count > 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+   
     static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
     {
         Debug.Log(string.Format("TCP client {0} has connected.",
@@ -74,11 +98,11 @@ public class PocoManager : MonoBehaviour
     }
 
     static void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
-    {
+    {        
         Debug.Log(string.Format("TCP client {0} has disconnected.",
            e.TcpClient.Client.RemoteEndPoint.ToString()));
     }
-
+      
 
     private void server_Received(object sender, TcpDatagramReceivedEventArgs<byte[]> e)
     {
@@ -91,98 +115,147 @@ public class PocoManager : MonoBehaviour
             return internalClient;
         });
     }
+        
+    /* [RPC]
+     static object ClickCurrentPosition(List<object> param)
+     {
 
+         var xPos = Convert.ToSingle(param[0]);
+         var yPos = Convert.ToSingle(param[1]);
+         lock (commands)
+         {
+             commands.Enqueue(() => clickPos(xPos, yPos));
+         }
+         return true;
+     }
+    
+        /// Clicks on that position of the active screen - not necessarily unity. 
+        /// To click a random position within unity, it's adviced to maximize and focus
+        ///  on unity and click on the centre / top of the screen size... 
+        /// I'm just leaving this commented code here for reference for the future in case
+        /// we want to fully implement this solution
+        static private void clickPos(float xPos, float yPos)
+    {
+        mouse_event((int)MouseEventFlags.LeftDown, xPos, yPos, 0, 0);
+        mouse_event((int)MouseEventFlags.LeftUp, xPos, yPos, 0, 0);
+        lock (commands)
+        {
+            commands.Dequeue();
+        }
+    }
+    */
     [RPC]
-    static object RotateCamera(List<object> param)
+    static object RotateObject(List<object> param)
     {
         var xRotation = Convert.ToSingle(param[0]);
         var yRotation = Convert.ToSingle(param[1]);
         var zRotation = Convert.ToSingle(param[2]);
         float speed = 0f;
-        if (param.Count > 1)
-            speed = Convert.ToSingle(param[3]);
+        if (param.Count > 5)
+            speed = Convert.ToSingle(param[5]);
         Vector3 mousePosition = new Vector3(xRotation, yRotation, zRotation);
-
-        lock (commands)
+        foreach (GameObject cameraContainer in GameObject.FindObjectsOfType<GameObject>())
         {
-            var currentRotation = Camera.main.transform.rotation;
-            commands.Enqueue(() => rotate(currentRotation, mousePosition, speed));
-        }
-
-        return true;
-    }
-
-    static private void rotate(Quaternion originalRotation, Vector3 mousePosition, float speed)
-    {
-        Debug.Log("rotating");
-        if (speed != 0)
-        {
-            if (!UnityNode.RotateCamera(originalRotation, mousePosition, speed))
+            if (cameraContainer.name.Equals(param[3]))
             {
-                lock (commands)
+                foreach (GameObject cameraFollower in GameObject.FindObjectsOfType<GameObject>())
                 {
-                    commands.Dequeue();
-                }
-            }
-        }
-        else
-        {
-            if (!UnityNode.RotateCamera(originalRotation, mousePosition))
-            {
-                lock (commands)
-                {
-                    commands.Dequeue();
-                }
-            }
-        }
-    }
+                    if (cameraFollower.name.Equals(param[4]))
+                    {
+                        lock (commands)
+                        {
+                            commands.Enqueue(() => recoverOffset(cameraFollower, cameraContainer, speed));
+                        }
 
-    [RPC]
-    static object LookAtObject(List<object> param)
-    {
-        float speed = 0f;
-        if (param.Count > 1)
-            speed = Convert.ToSingle(param[1]);
-        foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>())
-        {
-            if (go.name.Equals(param[0]))
-            {
-                lock (commands)
-                {
-                    commands.Enqueue(() => lookAt(go, speed));
+                        lock (commands)
+                        {
+                            var currentRotation = cameraContainer.transform.rotation;
+                            commands.Enqueue(() => rotate(cameraContainer, currentRotation, mousePosition, speed));
+                        }
+                        return true;
+                    }
                 }
+                
                 return true;
             }
         }
         return false;
     }
 
-
-    static private void lookAt(GameObject go, float speed)
+    static private void rotate(GameObject go, Quaternion originalRotation, Vector3 mousePosition, float speed)
     {
-        Debug.Log("looking at " + go.name);
-
-        if (speed != 0)
+        Debug.Log("rotating");
+        if (!UnityNode.RotateObject(originalRotation, mousePosition, go, speed))
         {
-            if (!UnityNode.LookAtMe(go, speed))
+            lock (commands)
             {
-                lock (commands)
+                commands.Dequeue();
+            }
+        }
+    }
+    
+
+    [RPC]
+    static object ObjectLookAt(List<object> param)
+    {
+        float speed = 0f;
+        if (param.Count > 3)
+            speed = Convert.ToSingle(param[3]);
+        foreach (GameObject toLookAt in GameObject.FindObjectsOfType<GameObject>()) // hacer un loop y tener los objetos a null antes
+        {
+            if (toLookAt.name.Equals(param[0]))
+            {
+                foreach (GameObject cameraContainer in GameObject.FindObjectsOfType<GameObject>())
                 {
-                    commands.Dequeue();
+                    if (cameraContainer.name.Equals(param[1]))
+                    {
+                        foreach (GameObject cameraFollower in GameObject.FindObjectsOfType<GameObject>())
+                        {
+                            if (cameraFollower.name.Equals(param[2]))
+                            {
+                                lock (commands)
+                                {
+                                    commands.Enqueue(() => recoverOffset(cameraFollower, cameraContainer, speed));
+                                }
+
+                                lock (commands)
+                                {
+                                    commands.Enqueue(() => objectLookAt(cameraContainer, toLookAt, speed));
+                                }
+
+                                return true;
+                            }
+                        }
+                    }
                 }
             }
         }
-        else
+        return false;
+    }
+
+    static private void recoverOffset(GameObject subcontainter, GameObject cameraContainer, float speed)
+    {
+        Debug.Log("recovering " + cameraContainer.name);
+        if (!UnityNode.ObjectRecoverOffset(subcontainter, cameraContainer, speed))
         {
-            if (!UnityNode.LookAtMe(go))
+            lock (commands)
             {
-                lock (commands)
-                {
-                    commands.Dequeue();
-                }
+                commands.Dequeue();
             }
         }
+    }
 
+    static private void objectLookAt(GameObject go, GameObject toLookAt, float speed)
+    {
+        Debug.Log("looking at " + toLookAt.name);
+        Debug.Log("from " + go.name);
+        if (!UnityNode.ObjectLookAtObject(toLookAt, go, speed))
+        {
+            lock (commands)
+            {
+                commands.Dequeue();
+            }
+        }
     }
 
     [RPC]
@@ -257,9 +330,7 @@ public class PocoManager : MonoBehaviour
 
     void Update()
     {
-        // save last position and set at the beginning and end?
-        //rotation = Camera.main.transform.rotation;
-        Camera.main.transform.rotation = rotation;
+   //     Camera.main.transform.rotation = rotation;
 
         foreach (TcpClientState client in inbox.Values)
         {
@@ -279,7 +350,7 @@ public class PocoManager : MonoBehaviour
                 debugProfilingData["packRpcResponse"] = t2 - t1;
                 TcpClientState internalClientToBeThrowAway;
                 string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString();
-                inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);
+                inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);                  
             });
         }
 
@@ -287,9 +358,7 @@ public class PocoManager : MonoBehaviour
         {
             Debug.Log("command executed " + commands.Count);
             commands.Peek()();
-            rotation = Camera.main.transform.rotation;
         }
-
     }
 
     void OnApplicationQuit()
