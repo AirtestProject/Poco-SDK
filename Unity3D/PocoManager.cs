@@ -24,8 +24,6 @@ public class PocoManager : MonoBehaviour
     private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
     private static Queue<Action> commands = new Queue<Action>();
 
-    [DllImport("user32.dll")]
-    private static extern void mouse_event(int dwFlags, float dx, float dy, int dwData, int dwExtraInfo);
 
     [Flags]
     public enum MouseEventFlags
@@ -53,7 +51,8 @@ public class PocoManager : MonoBehaviour
 
         prot = new SimpleProtocolFilter();
         rpc = new RPCParser();
-        rpc.addRpcMethod("checkIfUnityFinished", IsQueueEmpty);
+        rpc.addRpcMethod("isVRSupported", isVRSupported);
+        rpc.addRpcMethod("hasMovementFinished", IsQueueEmpty);
         rpc.addRpcMethod("RotateObject", RotateObject);
         rpc.addRpcMethod("ObjectLookAt", ObjectLookAt);
         rpc.addRpcMethod("Screenshot", Screenshot);
@@ -78,6 +77,11 @@ public class PocoManager : MonoBehaviour
         commands.Clear();
     }
 
+    [RPC]
+    public static object isVRSupported(List<object> param)
+    {
+        return UnityEngine.XR.XRSettings.loadedDeviceName.Equals("CARDBOARD");
+    }
 
     [RPC]
     public static object IsQueueEmpty(List<object> param)
@@ -85,12 +89,20 @@ public class PocoManager : MonoBehaviour
         Debug.Log("Checking queue");
         if (commands != null && commands.Count > 0)
         {
-            return false;
+            return null;
+        }
+        else
+        {
+            Thread.Sleep(1000); // we wait a bit and check again just in case we run in between calls
+            if (commands != null && commands.Count > 0)
+            {
+                return null;
+            }
         }
 
-        return true;
+        return commands.Count;
     }
-   
+
     static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
     {
         Debug.Log(string.Format("TCP client {0} has connected.",
@@ -98,11 +110,11 @@ public class PocoManager : MonoBehaviour
     }
 
     static void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
-    {        
+    {
         Debug.Log(string.Format("TCP client {0} has disconnected.",
            e.TcpClient.Client.RemoteEndPoint.ToString()));
     }
-      
+
 
     private void server_Received(object sender, TcpDatagramReceivedEventArgs<byte[]> e)
     {
@@ -115,35 +127,7 @@ public class PocoManager : MonoBehaviour
             return internalClient;
         });
     }
-        
-    /* [RPC]
-     static object ClickCurrentPosition(List<object> param)
-     {
 
-         var xPos = Convert.ToSingle(param[0]);
-         var yPos = Convert.ToSingle(param[1]);
-         lock (commands)
-         {
-             commands.Enqueue(() => clickPos(xPos, yPos));
-         }
-         return true;
-     }
-    
-        /// Clicks on that position of the active screen - not necessarily unity. 
-        /// To click a random position within unity, it's adviced to maximize and focus
-        ///  on unity and click on the centre / top of the screen size... 
-        /// I'm just leaving this commented code here for reference for the future in case
-        /// we want to fully implement this solution
-        static private void clickPos(float xPos, float yPos)
-    {
-        mouse_event((int)MouseEventFlags.LeftDown, xPos, yPos, 0, 0);
-        mouse_event((int)MouseEventFlags.LeftUp, xPos, yPos, 0, 0);
-        lock (commands)
-        {
-            commands.Dequeue();
-        }
-    }
-    */
     [RPC]
     static object RotateObject(List<object> param)
     {
@@ -175,7 +159,7 @@ public class PocoManager : MonoBehaviour
                         return true;
                     }
                 }
-                
+
                 return true;
             }
         }
@@ -193,7 +177,7 @@ public class PocoManager : MonoBehaviour
             }
         }
     }
-    
+
 
     [RPC]
     static object ObjectLookAt(List<object> param)
@@ -330,7 +314,7 @@ public class PocoManager : MonoBehaviour
 
     void Update()
     {
-   //     Camera.main.transform.rotation = rotation;
+        //     Camera.main.transform.rotation = rotation;
 
         foreach (TcpClientState client in inbox.Values)
         {
@@ -350,7 +334,7 @@ public class PocoManager : MonoBehaviour
                 debugProfilingData["packRpcResponse"] = t2 - t1;
                 TcpClientState internalClientToBeThrowAway;
                 string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString();
-                inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);                  
+                inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);
             });
         }
 
