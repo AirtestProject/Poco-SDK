@@ -34,15 +34,20 @@ namespace Poco
 		private Rect rect;
 		private Vector2 objectPos;
 		private List<string> components;
+		private Camera camera;
 
 
 		public UnityNode (GameObject obj)
 		{
 			gameObject = obj;
+			camera = gameObject.GetComponent<Camera> ();
+			if (camera == null) {
+				camera = Camera.main;
+			}
 			renderer = gameObject.GetComponent<Renderer> ();
 			rectTransform = gameObject.GetComponent<RectTransform> ();
 			rect = GameObjectRect (renderer, rectTransform);
-			objectPos = renderer ? WorldToGUIPoint (renderer.bounds.center) : Vector2.zero;
+			objectPos = renderer ? WorldToGUIPoint (camera, renderer.bounds.center) : Vector2.zero;
 			components = GameObjectAllComponents ();
 		}
 
@@ -91,7 +96,7 @@ namespace Poco
 			case "tag":
 				return GameObjectTag ();
 			case "_instanceId":
-				return gameObject.GetInstanceID();
+				return gameObject.GetInstanceID ();
 			default:
 				return null;
 			}
@@ -125,18 +130,18 @@ namespace Poco
 				{ "components", components },
 				{ "texture", GetImageSourceTexture () },
 				{ "tag", GameObjectTag () },
-				{ "_instanceId", gameObject.GetInstanceID() },
+				{ "_instanceId", gameObject.GetInstanceID () },
 			};
 			return payload;
 		}
 
-		private string GuessObjectTypeFromComponentNames (List<string> components) 
+		private string GuessObjectTypeFromComponentNames (List<string> components)
 		{
 			List<string> cns = new List<string> (components);
 			cns.Reverse ();
 			foreach (string name in cns) {
-				if (TypeNames.ContainsKey(name)) {
-					return TypeNames[name];
+				if (TypeNames.ContainsKey (name)) {
+					return TypeNames [name];
 				}
 			}
 			return DefaultTypeName;
@@ -185,7 +190,7 @@ namespace Poco
 		{
 			List<string> components = new List<string> ();
 			Component[] allComponents = gameObject.GetComponents<Component> ();
-			if (allComponents != null){
+			if (allComponents != null) {
 				foreach (Component ac in allComponents) {
 					if (ac != null) {
 						components.Add (ac.GetType ().Name);
@@ -198,8 +203,8 @@ namespace Poco
 		private Dictionary<string, float> GameObjectzOrders ()
 		{
 			float CameraViewportPoint = 0;
-			if (Camera.main != null) {
-				CameraViewportPoint = Math.Abs (Camera.main.WorldToViewportPoint (gameObject.transform.position).z);
+			if (camera != null) {
+				CameraViewportPoint = Math.Abs (camera.WorldToViewportPoint (gameObject.transform.position).z);
 			}
 			Dictionary<string, float> zOrders = new Dictionary<string, float> () {
 				{ "global", 0f },
@@ -212,7 +217,7 @@ namespace Poco
 		{
 			Rect rect = new Rect (0, 0, 0, 0);
 			if (renderer) {
-				rect = RendererToScreenSpace (renderer);
+				rect = RendererToScreenSpace (camera, renderer);
 			} else if (rectTransform) {
 				rect = RectTransformToScreenSpace (rectTransform);
 			}
@@ -230,8 +235,8 @@ namespace Poco
 			} else if (rectTransform) {
 				// ui object (rendered on screen space, other render modes may be different)
 				// use center pos for now
-				Canvas rootCanvas = GetRootCanvas(gameObject);
-				RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode();
+				Canvas rootCanvas = GetRootCanvas (gameObject);
+				RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode ();
 				switch (renderMode) {
 				case RenderMode.ScreenSpaceCamera:
                         //上一个方案经过实际测试发现还有两个问题存在
@@ -241,34 +246,34 @@ namespace Poco
                         //试了一晚上，找到了解决办法。
 
                         //用MainCanvas转一次屏幕坐标
-                        Vector2 position = RectTransformUtility.WorldToScreenPoint(rootCanvas.worldCamera, rectTransform.transform.position);
+					Vector2 position = RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, rectTransform.transform.position);
                         //注意: 这里的position其实是Pivot点在Screen上的坐标，并不是图形意义上的中心点,在经过下列玄学公式换算才是真的图形中心在屏幕的位置。
                         //公式内算上了rootCanvas.scaleFactor 缩放因子，经测试至少在Canvas Scaler.Expand模式下，什么分辨率和屏幕比都抓的很准，兼容性很强，其他的有待测试。
                         //由于得出来的坐标是左下角为原点，触控输入是左上角为原点，所以要上下反转一下Poco才能用,所以y坐标用Screen.height减去。
-                        position.Set(
-                            position.x - rectTransform.rect.width * rootCanvas.scaleFactor * (rectTransform.pivot.x - 0.5f),
-                            Screen.height - (position.y - rectTransform.rect.height * rootCanvas.scaleFactor * (rectTransform.pivot.y - 0.5f))
-                            );
-                        pos[0] = position.x / Screen.width;
-                        pos[1] = position.y / Screen.height;
-                        break; 
+					position.Set (
+						position.x - rectTransform.rect.width * rootCanvas.scaleFactor * (rectTransform.pivot.x - 0.5f),
+						Screen.height - (position.y - rectTransform.rect.height * rootCanvas.scaleFactor * (rectTransform.pivot.y - 0.5f))
+					);
+					pos [0] = position.x / Screen.width;
+					pos [1] = position.y / Screen.height;
+					break; 
 				case RenderMode.WorldSpace:
 					Vector2 _pos = RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, rectTransform.transform.position);
 					pos [0] = _pos.x / Screen.width;
 					pos [1] = (Screen.height - _pos.y) / Screen.height;
 					break;
 				default:
-					pos[0] = rect.center.x / (float)Screen.width;
-					pos[1] = rect.center.y / (float)Screen.height;
+					pos [0] = rect.center.x / (float)Screen.width;
+					pos [1] = rect.center.y / (float)Screen.height;
 					break;
 				}
 			}
 			return pos;
 		}
 
-		private Canvas GetRootCanvas(GameObject gameObject)
+		private Canvas GetRootCanvas (GameObject gameObject)
 		{
-			Canvas canvas = gameObject.GetComponentInParent<Canvas>();
+			Canvas canvas = gameObject.GetComponentInParent<Canvas> ();
 			// 如果unity版本小于unity5.5，就用递归的方式取吧，没法直接取rootCanvas
 			// 如果有用到4.6以下版本的话就自己手动在这里添加条件吧
 			#if UNITY_4_6 || UNITY_4_7 || UNITY_4_8 || UNITY_4_9 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2 || UNITY_5_3 || UNITY_5_4
@@ -296,17 +301,20 @@ namespace Poco
 		{
 			float[] size = { 0f, 0f };
 			if (rectTransform) {
-				Canvas rootCanvas = GetRootCanvas(gameObject);
-				RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode();
+				Canvas rootCanvas = GetRootCanvas (gameObject);
+				RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode ();
 				switch (renderMode) {
 				case RenderMode.ScreenSpaceCamera:
-					Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
-					size = new float[]{ _rect.width * rootCanvas.scaleFactor / (float)Screen.width, _rect.height * rootCanvas.scaleFactor / (float)Screen.height };
+					Rect _rect = RectTransformUtility.PixelAdjustRect (rectTransform, rootCanvas);
+					size = new float[] {
+						_rect.width * rootCanvas.scaleFactor / (float)Screen.width,
+						_rect.height * rootCanvas.scaleFactor / (float)Screen.height
+					};
 					break;
 				case RenderMode.WorldSpace:		
 					Rect rect_ = rectTransform.rect;
 					RectTransform canvasTransform = rootCanvas.GetComponent<RectTransform> ();
-					size = new float[] {rect_.width / canvasTransform.rect.width, rect_.height / canvasTransform.rect.height};
+					size = new float[] { rect_.width / canvasTransform.rect.width, rect_.height / canvasTransform.rect.height };
 					break;
 				default:
 					size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
@@ -330,7 +338,7 @@ namespace Poco
 			if (!renderer) { //<Modified> some object do not have renderer
 				return defaultValue;
 			}
-			float[] anchor = {(objectPos.x - rect.xMin) / rect.width, (objectPos.y - rect.yMin) / rect.height};
+			float[] anchor = { (objectPos.x - rect.xMin) / rect.width, (objectPos.y - rect.yMin) / rect.height };
 			if (Double.IsNaN (anchor [0]) || Double.IsNaN (anchor [1])) {
 				return defaultValue;
 			} else if (Double.IsPositiveInfinity (anchor [0]) || Double.IsPositiveInfinity (anchor [1])) {
@@ -362,29 +370,29 @@ namespace Poco
 			return null;
 		}
 
-		protected static Vector2 WorldToGUIPoint (Vector3 world)
+		protected static Vector2 WorldToGUIPoint (Camera camera, Vector3 world)
 		{
 			Vector2 screenPoint = Vector2.zero;
-			if (Camera.main != null) {
-				screenPoint = Camera.main.WorldToScreenPoint (world);
+			if (camera != null) {
+				screenPoint = camera.WorldToScreenPoint (world);
 				screenPoint.y = (float)Screen.height - screenPoint.y;
 			}
 			return screenPoint;
 		}
 
-		protected static Rect RendererToScreenSpace (Renderer renderer)
+		protected static Rect RendererToScreenSpace (Camera camera, Renderer renderer)
 		{
 			Vector3 cen = renderer.bounds.center;
 			Vector3 ext = renderer.bounds.extents;
 			Vector2[] extentPoints = new Vector2[8] {
-				WorldToGUIPoint (new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z - ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z - ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z + ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z + ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z - ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z - ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z + ext.z)),
-				WorldToGUIPoint (new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z + ext.z))
+				WorldToGUIPoint (camera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z - ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z - ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z + ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z + ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z - ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z - ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x - ext.x, cen.y + ext.y, cen.z + ext.z)),
+				WorldToGUIPoint (camera, new Vector3 (cen.x + ext.x, cen.y + ext.y, cen.z + ext.z))
 			};
 			Vector2 min = extentPoints [0];
 			Vector2 max = extentPoints [0];
@@ -404,7 +412,7 @@ namespace Poco
 			return rect;
 		}
 
-		public static bool SetText(GameObject go, string textVal)
+		public static bool SetText (GameObject go, string textVal)
 		{
 			if (go != null) {
 				var inputField = go.GetComponent<InputField> ();
