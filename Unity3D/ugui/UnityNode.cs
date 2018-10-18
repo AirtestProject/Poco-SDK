@@ -40,10 +40,19 @@ namespace Poco
 		public UnityNode (GameObject obj)
 		{
 			gameObject = obj;
-			camera = gameObject.GetComponent<Camera> ();
-			if (camera == null) {
-				camera = Camera.main;
+			camera = Camera.main;
+			foreach (var cam in Camera.allCameras) {
+				// skip the main camera
+				// we want to use specified camera first then fallback to main camera if no other cameras
+				// for further advanced cases, we could test whether the game object is visible within the camera
+				if (cam == Camera.main) {
+					continue;
+				}
+				if ((cam.cullingMask & (1 << gameObject.layer)) != 0) {
+					camera = cam;
+				}
 			}
+
 			renderer = gameObject.GetComponent<Renderer> ();
 			rectTransform = gameObject.GetComponent<RectTransform> ();
 			rect = GameObjectRect (renderer, rectTransform);
@@ -95,6 +104,10 @@ namespace Poco
 				return GetImageSourceTexture ();
 			case "tag":
 				return GameObjectTag ();
+			case "layer":
+				return GameObjectLayerName ();
+			case "_ilayer":
+				return GameObjectLayer ();
 			case "_instanceId":
 				return gameObject.GetInstanceID ();
 			default:
@@ -130,6 +143,8 @@ namespace Poco
 				{ "components", components },
 				{ "texture", GetImageSourceTexture () },
 				{ "tag", GameObjectTag () },
+				{ "_ilayer", GameObjectLayer() },
+				{ "layer", GameObjectLayerName() },
 				{ "_instanceId", gameObject.GetInstanceID () },
 			};
 			return payload;
@@ -161,6 +176,15 @@ namespace Poco
 			} else {
 				return false;
 			}
+		}
+
+		private int GameObjectLayer()
+		{
+			return gameObject.layer;
+		}
+		private string GameObjectLayerName()
+		{
+			return LayerMask.LayerToName (gameObject.layer);
 		}
 
 		private bool GameObjectClickable (List<string> components)
