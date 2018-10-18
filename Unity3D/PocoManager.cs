@@ -17,7 +17,7 @@ using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
-	public const int versionCode = 3;
+	public const int versionCode = 4;
 
 	public int port = 5001;
 	private bool mRunning;

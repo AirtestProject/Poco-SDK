@@ -115,6 +115,8 @@ namespace Poco
 		}
 
 		private Camera GetCamera () {
+			// it seems that NGUI has it own camera culling mask.
+			// so we don't need to test within which camera a game object is visible
 			return UICamera.currentCamera != null ? UICamera.currentCamera : UICamera.mainCamera;
 		}
 
