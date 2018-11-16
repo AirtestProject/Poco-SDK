@@ -23,7 +23,7 @@
 ## 使用AirtestIDE连接
 
 ### 连接手机浏览器
-除了windows浏览器之外，AirtestIDE也支持Android和iOS手机连接，可以在手机上打开Egret页面（或者微信小程序/游戏），然后通过AirtestIDE进行连接，Windows和MacOS版本IDE都可以使用。连接基本原理为：
+AirtestIDE支持Android和iOS手机连接，可以在手机上打开Egret页面（或者微信小程序/游戏），然后通过AirtestIDE进行连接，Windows和MacOS版本IDE都可以使用。连接基本原理为：
 
 ![image](doc/mobile_egret.png)
 
@@ -64,7 +64,7 @@ AirtestIDE界面如下：
 ![image](doc/egret_run.gif)
 
 ### 连接桌面浏览器
-AirtestIDE目前支持Windows窗口连接，MacOS窗口支持暂未放出。所以目前需要使用Windows环境连接桌面浏览器，步骤如下：
+AirtestIDE也支持Windows窗口连接，MacOS窗口支持暂未放出。所以目前需要使用Windows环境连接桌面浏览器，步骤如下：
 
 1. 运行项目，并在浏览器中打开页面，同时启动broker代理`python -m poco.utils.net.stdbroker ws://*:5003 tcp://*:15004`，如下： 
 
