@@ -39,7 +39,7 @@ adb reverse tcp:5003 tcp:5003
 ```bash
  python -m poco.utils.net.stdbroker "ws://*:5003" "tcp://*:15004"
 ```
-启动broker之后，在手机上访问Egret的页面（需要使用全屏模式保证坐标准确）。访问的时候，broker会打印手机连接上的log，如下：
+启动broker之后，在手机上访问Egret的页面（需要使用全屏模式保证坐标准确）。访问的时候，broker会打印手机连接上的log，如下：
 ```bash
 ~ python -m poco.utils.net.stdbroker "ws://*:5003" "tcp://*:15004"
 server listens on ("0.0.0.0", 5003) transport websocket
