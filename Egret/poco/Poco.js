@@ -40,7 +40,7 @@ PocoManager.prototype.init_server = function () {
 
         this.server.onmessage = function (evt) {
             console.log('Network onMessage...');
-            let text = decodeUTF8(new Uint8Array(evt.data));
+            var text = decodeUTF8(new Uint8Array(evt.data));
             console.log(text);
             try {
                 var req = JSON.parse(text);
