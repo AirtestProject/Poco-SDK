@@ -40,21 +40,16 @@ PocoManager.prototype.init_server = function () {
 
         this.server.onmessage = function (evt) {
             console.log('Network onMessage...');
-            var fr = new FileReader();
-            fr.onloadend = function (e) {
-                var text = e.srcElement.result;
-                console.log(text);
-
-                try {
-                    var req = JSON.parse(text);
-                    var res = this.handle_request(req)
-                    var sres = JSON.stringify(res)
-                    this.server.send(sres)
-                } catch (error) {
-                    console.log("[Poco] error when handling rpc request. req=" + evt.data + '\nerror message: ' + error.stack)
-                }
-            }.bind(this);
-            fr.readAsText(evt.data);
+            var text = decodeUTF8(new Uint8Array(evt.data));
+            console.log(text);
+            try {
+                var req = JSON.parse(text);
+                var res = this.handle_request(req)
+                var sres = JSON.stringify(res)
+                this.server.send(sres)
+            } catch (error) {
+                console.log("[Poco] error when handling rpc request. req=" + evt.data + '\nerror message: ' + error.stack)
+            }
         };
 
         this.server.onclose = function (evt) {
@@ -98,6 +93,38 @@ PocoManager.prototype.handle_request = function (req) {
     }
     console.log(ret);
     return ret
+}
+
+function decodeUTF8(arr) {
+    for (var i = 0; i < arr.length; i++) {
+        if (arr[i] < 0) arr[i] += 256;
+    }
+    var res = [];
+    for (i = 0; i < arr.length; i++) {
+        if (arr[i] == 0) break;
+        if ((arr[i] & 128) == 0) res.push(arr[i]);				//1位
+        else if ((arr[i] & 64) == 0) res.push(arr[i] & 127);		//1位
+        else if ((arr[i] & 32) == 0)	//2位
+        {
+            res.push((arr[i] & 31) << 6 + (arr[i + 1] & 63));
+            i++;
+        }
+        else if ((arr[i] & 16) == 0)	//3位
+        {
+            res.push((arr[i] & 15) << 12 + (arr[i + 1] & 63) << 6 + (arr[i + 2] & 63));
+            i += 2;
+        }
+        else if ((arr[i] & 8) == 0)	//4位
+        {
+            res.push((arr[i] & 7) << 18 + (arr[i + 1] & 63) << 12 + (arr[i + 2] & 63) << 6 + (arr[i + 3] & 63));
+            i += 3;
+        }
+    }
+    var str = "";
+    for (i = 0; i < res.length; i++) {
+        str += String.fromCharCode(res[i]);
+    }
+    return str;
 }
 
 
