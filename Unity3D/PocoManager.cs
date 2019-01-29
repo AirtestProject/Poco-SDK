@@ -56,16 +56,27 @@ public class PocoManager : MonoBehaviour
 
 		mRunning = true;
 
-		server = new AsyncTcpServer (port);
-		server.Encoding = Encoding.UTF8;
-		server.ClientConnected +=
-			new EventHandler<TcpClientConnectedEventArgs> (server_ClientConnected);
-		server.ClientDisconnected +=
-			new EventHandler<TcpClientDisconnectedEventArgs> (server_ClientDisconnected);
-		server.DatagramReceived += 
-			new EventHandler<TcpDatagramReceivedEventArgs<byte[]>> (server_Received);
-		server.Start ();
-		Debug.Log ("Tcp server started");
+		for (int i = 0; i < 5; i++) {
+			server = new AsyncTcpServer (port + i);
+			server.Encoding = Encoding.UTF8;
+			server.ClientConnected +=
+				new EventHandler<TcpClientConnectedEventArgs> (server_ClientConnected);
+			server.ClientDisconnected +=
+				new EventHandler<TcpClientDisconnectedEventArgs> (server_ClientDisconnected);
+			server.DatagramReceived += 
+				new EventHandler<TcpDatagramReceivedEventArgs<byte[]>> (server_Received);
+			try {
+				server.Start ();
+				Debug.Log (string.Format("Tcp server started and listening at {0}", server.Port));
+				break;
+			} catch (SocketException e) {
+				// try next available port
+				server = null;
+			}
+		}
+		if (!server) {
+			Debug.Log (string.Format("Unable to find an unused port from {0} to {1}", port, port + 5));
+		}
 	}
 
 	static void server_ClientConnected (object sender, TcpClientConnectedEventArgs e)
