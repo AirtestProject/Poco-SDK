@@ -17,7 +17,7 @@ using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
-	public const int versionCode = 4;
+	public const int versionCode = 5;
 
 	public int port = 5001;
 	private bool mRunning;
@@ -57,25 +57,25 @@ public class PocoManager : MonoBehaviour
 		mRunning = true;
 
 		for (int i = 0; i < 5; i++) {
-			server = new AsyncTcpServer (port + i);
-			server.Encoding = Encoding.UTF8;
-			server.ClientConnected +=
+			this.server = new AsyncTcpServer (port + i);
+			this.server.Encoding = Encoding.UTF8;
+			this.server.ClientConnected +=
 				new EventHandler<TcpClientConnectedEventArgs> (server_ClientConnected);
-			server.ClientDisconnected +=
+			this.server.ClientDisconnected +=
 				new EventHandler<TcpClientDisconnectedEventArgs> (server_ClientDisconnected);
-			server.DatagramReceived += 
+			this.server.DatagramReceived += 
 				new EventHandler<TcpDatagramReceivedEventArgs<byte[]>> (server_Received);
 			try {
-				server.Start ();
+				this.server.Start ();
 				Debug.Log (string.Format("Tcp server started and listening at {0}", server.Port));
 				break;
 			} catch (SocketException e) {
 				// try next available port
-				server = null;
+				this.server = null;
 			}
 		}
-		if (!server) {
-			Debug.Log (string.Format("Unable to find an unused port from {0} to {1}", port, port + 5));
+		if (!this.server) {
+			Debug.LogError (string.Format("Unable to find an unused port from {0} to {1}", port, port + 5));
 		}
 	}
 
