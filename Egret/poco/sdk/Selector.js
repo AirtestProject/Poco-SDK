@@ -74,6 +74,18 @@ Selector.prototype.selectImpl = function (cond, multiple, root, maxDepth, onlyVi
         var i = args[1]
         result = [this.selectImpl(cond, multiple, root, maxDepth, onlyVisibleNode, includeRoot)[i]]
     }
+    else if (op === '^') {
+        // parent
+        // only select parent of the first matched UI element
+        var query1 = args[0]
+        var result1 = this.selectImpl(query1, false, root, maxDepth, onlyVisibleNode, includeRoot)
+        if (result1.length > 0) {
+            var parent_node = result1[0].getParent()
+            if (parent_node) {
+                result = [parent_node]
+            }
+        }
+    }
     else {
         this._selectTraverse(cond, root, result, multiple, maxDepth, onlyVisibleNode, includeRoot)
     }
