@@ -106,6 +106,17 @@ function Selector:selectImpl(cond, multiple, root, maxDepth, onlyVisibleNode, in
     elseif op == 'index' then
         local cond, i = unpack(args)
         result = {self:selectImpl(cond, multiple, root, maxDepth, onlyVisibleNode, includeRoot)[i + 1]}
+    elseif op == '^' then
+        -- parent
+        -- only select parent of the first matched UI element
+        local query1, _ = unpack(args)
+        local result1 = self:selectImpl(query1, false, root, maxDepth, onlyVisibleNode, includeRoot)
+        if #result1 > 0 then
+            local parent_node = result1[1]:getParent()
+            if parent_node ~= nil then
+                result = {parent_node}
+            end
+        end
     else
         self:_selectTraverse(cond, root, result, multiple, maxDepth, onlyVisibleNode, includeRoot)
     end

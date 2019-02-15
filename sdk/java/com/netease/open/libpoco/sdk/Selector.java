@@ -91,6 +91,18 @@ public class Selector implements ISelector<AbstractNode> {
             int i = args.getInt(1);
             result = new LinkedList<>();
             result.add(this.selectImpl(cond1, multiple, root, maxDepth, onlyVisibleNode, includeRoot).get(i));
+        } else if (op.equals("^")) {
+            // parent
+            // only select parent of the first matched UI element
+            JSONArray query1 = args.getJSONArray(0);
+            List<AbstractNode> result1 = this.selectImpl(query1, false, root, maxDepth, onlyVisibleNode, includeRoot);
+            if (!result1.isEmpty()) {
+                AbstractNode parent_node = result1.get(0).getParent();
+                if (parent_node != null) {
+                    result = new LinkedList<>();
+                    result.add(parent_node);
+                }
+            }
         } else {
             this.selectTraverse(cond, root, result, multiple, maxDepth, onlyVisibleNode, includeRoot);
         }

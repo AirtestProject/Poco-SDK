@@ -137,6 +137,15 @@ class Selector(ISelector):
             except IndexError:
                 raise NoSuchTargetException(
                     u'Query results index out of range. Index={} condition "{}" from root "{}".'.format(i, cond, root))
+        elif op == '^':
+            # parent
+            # only select parent of the first matched UI element
+            query1, _ = args
+            result1 = self.selectImpl(query1, False, root, maxDepth, onlyVisibleNode, includeRoot)
+            if result1:
+                parent_node = result1[0].getParent()
+                if parent_node is not None:
+                    result = [parent_node]
         else:
             self._selectTraverse(cond, root, result, multiple, maxDepth, onlyVisibleNode, includeRoot)
 
