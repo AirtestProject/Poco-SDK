@@ -14,7 +14,6 @@ using Debug = UnityEngine.Debug;
 public class PocoManager : MonoBehaviour
 {
 	public const int versionCode = 3;
-	float i = 0f;
 	public int port = 5001;
 	private bool mRunning;
 	public AsyncTcpServer server = null;
@@ -48,7 +47,6 @@ public class PocoManager : MonoBehaviour
 	{
 		Application.runInBackground = true;
 		DontDestroyOnLoad(this);
-
 		prot = new SimpleProtocolFilter();
 		rpc = new RPCParser();
 		rpc.addRpcMethod("isVRSupported", isVRSupported);
@@ -60,6 +58,7 @@ public class PocoManager : MonoBehaviour
 		rpc.addRpcMethod("Dump", Dump);
 		rpc.addRpcMethod("GetDebugProfilingData", GetDebugProfilingData);
 		rpc.addRpcMethod("SetText", SetText);
+
 		rpc.addRpcMethod("GetSDKVersion", GetSDKVersion);
 
 		mRunning = true;
@@ -78,13 +77,13 @@ public class PocoManager : MonoBehaviour
 	}
 
 	[RPC]
-	public static object isVRSupported(List<object> param)
+	public object isVRSupported(List<object> param)
 	{
 		return UnityEngine.XR.XRSettings.loadedDeviceName.Equals("CARDBOARD");
 	}
 
 	[RPC]
-	public static object IsQueueEmpty(List<object> param)
+	public object IsQueueEmpty(List<object> param)
 	{
 		Debug.Log("Checking queue");
 		if (commands != null && commands.Count > 0)
@@ -103,13 +102,13 @@ public class PocoManager : MonoBehaviour
 		return commands.Count;
 	}
 
-	static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
+	private void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
 	{
 		Debug.Log(string.Format("TCP client {0} has connected.",
 			e.TcpClient.Client.RemoteEndPoint.ToString()));
 	}
 
-	static void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
+	private void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
 	{
 		Debug.Log(string.Format("TCP client {0} has disconnected.",
 		   e.TcpClient.Client.RemoteEndPoint.ToString()));
@@ -129,7 +128,7 @@ public class PocoManager : MonoBehaviour
 	}
 
 	[RPC]
-	static object RotateObject(List<object> param)
+	private object RotateObject(List<object> param)
 	{
 		var xRotation = Convert.ToSingle(param[0]);
 		var yRotation = Convert.ToSingle(param[1]);
@@ -166,7 +165,7 @@ public class PocoManager : MonoBehaviour
 		return false;
 	}
 
-	static private void rotate(GameObject go, Quaternion originalRotation, Vector3 mousePosition, float speed)
+	private void rotate(GameObject go, Quaternion originalRotation, Vector3 mousePosition, float speed)
 	{
 		Debug.Log("rotating");
 		if (!UnityNode.RotateObject(originalRotation, mousePosition, go, speed))
@@ -180,7 +179,7 @@ public class PocoManager : MonoBehaviour
 
 
 	[RPC]
-	static object ObjectLookAt(List<object> param)
+	private object ObjectLookAt(List<object> param)
 	{
 		float speed = 0f;
 		if (param.Count > 3)
@@ -217,7 +216,7 @@ public class PocoManager : MonoBehaviour
 		return false;
 	}
 
-	static private void recoverOffset(GameObject subcontainter, GameObject cameraContainer, float speed)
+	private void recoverOffset(GameObject subcontainter, GameObject cameraContainer, float speed)
 	{
 		Debug.Log("recovering " + cameraContainer.name);
 		if (!UnityNode.ObjectRecoverOffset(subcontainter, cameraContainer, speed))
@@ -229,7 +228,7 @@ public class PocoManager : MonoBehaviour
 		}
 	}
 
-	static private void objectLookAt(GameObject go, GameObject toLookAt, float speed)
+	private void objectLookAt(GameObject go, GameObject toLookAt, float speed)
 	{
 		Debug.Log("looking at " + toLookAt.name);
 		Debug.Log("from " + go.name);
