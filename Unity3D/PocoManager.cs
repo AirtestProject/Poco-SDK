@@ -21,8 +21,7 @@ public class PocoManager : MonoBehaviour
 	private SimpleProtocolFilter prot = null;
 	private UnityDumper dumper = new UnityDumper();
 	private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
-	private static Queue<Action> commands = new Queue<Action>();
-
+	private VRSupport vr_support = new VRSupport();
 
 	[Flags]
 	public enum MouseEventFlags
@@ -49,10 +48,10 @@ public class PocoManager : MonoBehaviour
 		DontDestroyOnLoad(this);
 		prot = new SimpleProtocolFilter();
 		rpc = new RPCParser();
-		rpc.addRpcMethod("isVRSupported", isVRSupported);
-		rpc.addRpcMethod("hasMovementFinished", IsQueueEmpty);
-		rpc.addRpcMethod("RotateObject", RotateObject);
-		rpc.addRpcMethod("ObjectLookAt", ObjectLookAt);
+		rpc.addRpcMethod("isVRSupported", vr_support.isVRSupported);
+		rpc.addRpcMethod("hasMovementFinished", vr_support.IsQueueEmpty);
+		rpc.addRpcMethod("RotateObject", vr_support.RotateObject);
+		rpc.addRpcMethod("ObjectLookAt", vr_support.ObjectLookAt);
 		rpc.addRpcMethod("Screenshot", Screenshot);
 		rpc.addRpcMethod("GetScreenSize", GetScreenSize);
 		rpc.addRpcMethod("Dump", Dump);
@@ -73,42 +72,16 @@ public class PocoManager : MonoBehaviour
 			new EventHandler<TcpDatagramReceivedEventArgs<byte[]>>(server_Received);
 		server.Start();
 		Debug.Log("Tcp server started");
-		commands.Clear();
+		vr_support.ClearCommands();
 	}
 
-	[RPC]
-	public object isVRSupported(List<object> param)
-	{
-		return UnityEngine.XR.XRSettings.loadedDeviceName.Equals("CARDBOARD");
-	}
-
-	[RPC]
-	public object IsQueueEmpty(List<object> param)
-	{
-		Debug.Log("Checking queue");
-		if (commands != null && commands.Count > 0)
-		{
-			return null;
-		}
-		else
-		{
-			Thread.Sleep(1000); // we wait a bit and check again just in case we run in between calls
-			if (commands != null && commands.Count > 0)
-			{
-				return null;
-			}
-		}
-
-		return commands.Count;
-	}
-
-	private void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
+	static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
 	{
 		Debug.Log(string.Format("TCP client {0} has connected.",
 			e.TcpClient.Client.RemoteEndPoint.ToString()));
 	}
 
-	private void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
+	static void server_ClientDisconnected(object sender, TcpClientDisconnectedEventArgs e)
 	{
 		Debug.Log(string.Format("TCP client {0} has disconnected.",
 		   e.TcpClient.Client.RemoteEndPoint.ToString()));
@@ -125,120 +98,6 @@ public class PocoManager : MonoBehaviour
 		{
 			return internalClient;
 		});
-	}
-
-	[RPC]
-	private object RotateObject(List<object> param)
-	{
-		var xRotation = Convert.ToSingle(param[0]);
-		var yRotation = Convert.ToSingle(param[1]);
-		var zRotation = Convert.ToSingle(param[2]);
-		float speed = 0f;
-		if (param.Count > 5)
-			speed = Convert.ToSingle(param[5]);
-		Vector3 mousePosition = new Vector3(xRotation, yRotation, zRotation);
-		foreach (GameObject cameraContainer in GameObject.FindObjectsOfType<GameObject>())
-		{
-			if (cameraContainer.name.Equals(param[3]))
-			{
-				foreach (GameObject cameraFollower in GameObject.FindObjectsOfType<GameObject>())
-				{
-					if (cameraFollower.name.Equals(param[4]))
-					{
-						lock (commands)
-						{
-							commands.Enqueue(() => recoverOffset(cameraFollower, cameraContainer, speed));
-						}
-
-						lock (commands)
-						{
-							var currentRotation = cameraContainer.transform.rotation;
-							commands.Enqueue(() => rotate(cameraContainer, currentRotation, mousePosition, speed));
-						}
-						return true;
-					}
-				}
-
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private void rotate(GameObject go, Quaternion originalRotation, Vector3 mousePosition, float speed)
-	{
-		Debug.Log("rotating");
-		if (!UnityNode.RotateObject(originalRotation, mousePosition, go, speed))
-		{
-			lock (commands)
-			{
-				commands.Dequeue();
-			}
-		}
-	}
-
-
-	[RPC]
-	private object ObjectLookAt(List<object> param)
-	{
-		float speed = 0f;
-		if (param.Count > 3)
-			speed = Convert.ToSingle(param[3]);
-		foreach (GameObject toLookAt in GameObject.FindObjectsOfType<GameObject>()) // hacer un loop y tener los objetos a null antes
-		{
-			if (toLookAt.name.Equals(param[0]))
-			{
-				foreach (GameObject cameraContainer in GameObject.FindObjectsOfType<GameObject>())
-				{
-					if (cameraContainer.name.Equals(param[1]))
-					{
-						foreach (GameObject cameraFollower in GameObject.FindObjectsOfType<GameObject>())
-						{
-							if (cameraFollower.name.Equals(param[2]))
-							{
-								lock (commands)
-								{
-									commands.Enqueue(() => recoverOffset(cameraFollower, cameraContainer, speed));
-								}
-
-								lock (commands)
-								{
-									commands.Enqueue(() => objectLookAt(cameraContainer, toLookAt, speed));
-								}
-
-								return true;
-							}
-						}
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	private void recoverOffset(GameObject subcontainter, GameObject cameraContainer, float speed)
-	{
-		Debug.Log("recovering " + cameraContainer.name);
-		if (!UnityNode.ObjectRecoverOffset(subcontainter, cameraContainer, speed))
-		{
-			lock (commands)
-			{
-				commands.Dequeue();
-			}
-		}
-	}
-
-	private void objectLookAt(GameObject go, GameObject toLookAt, float speed)
-	{
-		Debug.Log("looking at " + toLookAt.name);
-		Debug.Log("from " + go.name);
-		if (!UnityNode.ObjectLookAtObject(toLookAt, go, speed))
-		{
-			lock (commands)
-			{
-				commands.Dequeue();
-			}
-		}
 	}
 
 	[RPC]
@@ -313,8 +172,6 @@ public class PocoManager : MonoBehaviour
 
 	void Update()
 	{
-		//     Camera.main.transform.rotation = rotation;
-
 		foreach (TcpClientState client in inbox.Values)
 		{
 			List<string> msgs = client.Prot.swap_msgs();
@@ -337,11 +194,7 @@ public class PocoManager : MonoBehaviour
 			});
 		}
 
-		if (null != commands && commands.Count > 0)
-		{
-			Debug.Log("command executed " + commands.Count);
-			commands.Peek()();
-		}
+		vr_support.PeekCommand();
 	}
 
 	void OnApplicationQuit()

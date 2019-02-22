@@ -115,7 +115,7 @@ namespace Poco
 			return ret;
 		}
 
-		public static bool RotateObject(Quaternion originalPosition, Vector3 mousePosition, GameObject cameraContainer, float rotationSpeed = 0.125f)
+		public bool RotateObject(Quaternion originalPosition, Vector3 mousePosition, GameObject cameraContainer, float rotationSpeed = 0.125f)
 		{
 			if (null == cameraContainer)
 			{
@@ -138,7 +138,7 @@ namespace Poco
 			return true;
 		}
 
-		public static bool ObjectLookAtObject(GameObject go, GameObject cameraContainer, float rotationSpeed = 0.125f)
+		public bool ObjectLookAtObject(GameObject go, GameObject cameraContainer, float rotationSpeed = 0.125f)
 		{
 			if (null == go || null == cameraContainer)
 			{
@@ -158,7 +158,7 @@ namespace Poco
 			return true;
 		}
 
-		public static bool ObjectRecoverOffset(GameObject subcontainer, GameObject cameraContainer, float rotationSpeed = 0.125f)
+		public bool ObjectRecoverOffset(GameObject subcontainer, GameObject cameraContainer, float rotationSpeed = 0.125f)
 		{
 			if (null == cameraContainer)
 			{
