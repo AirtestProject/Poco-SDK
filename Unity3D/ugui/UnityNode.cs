@@ -308,7 +308,7 @@ namespace Poco
                             );
                         pos[0] = position.x / Screen.width;
                         pos[1] = position.y / Screen.height;
-                        break; 
+                        break;
                     case RenderMode.WorldSpace:
                         Vector2 _pos = RectTransformUtility.WorldToScreenPoint (rootCanvas.worldCamera, rectTransform.transform.position);
                         pos [0] = _pos.x / Screen.width;

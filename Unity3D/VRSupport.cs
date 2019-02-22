@@ -220,7 +220,7 @@ public class VRSupport
 			return false;
 		}
 
-		// add offset with the camera            
+		// add offset with the camera
 		var cameraRotation = Camera.main.transform.localRotation;
 
 		var toRotate = new Quaternion(-cameraRotation.x, -cameraRotation.y, -cameraRotation.z, cameraRotation.w);
