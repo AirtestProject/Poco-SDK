@@ -13,7 +13,7 @@ using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
-	public const int versionCode = 3;
+	public const int versionCode = 6;
 	public int port = 5001;
 	private bool mRunning;
 	public AsyncTcpServer server = null;
@@ -22,14 +22,6 @@ public class PocoManager : MonoBehaviour
 	private UnityDumper dumper = new UnityDumper();
 	private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
 	private VRSupport vr_support = new VRSupport();
-
-	[Flags]
-	public enum MouseEventFlags
-	{
-		LeftDown = 0x00000002,
-		LeftUp = 0x00000004
-	}
-
 	private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
 		{ "dump", 0 },
 		{ "screenshot", 0 },
@@ -86,7 +78,6 @@ public class PocoManager : MonoBehaviour
 		Debug.Log(string.Format("TCP client {0} has disconnected.",
 		   e.TcpClient.Client.RemoteEndPoint.ToString()));
 	}
-
 
 	private void server_Received(object sender, TcpDatagramReceivedEventArgs<byte[]> e)
 	{
