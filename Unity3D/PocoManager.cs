@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Net.Sockets;
 using TcpServer;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -72,7 +73,7 @@ public class PocoManager : MonoBehaviour
 				this.server = null;
 			}
 		}
-		if (!this.server) {
+		if (this.server == null) {
 			Debug.LogError (string.Format("Unable to find an unused port from {0} to {1}", port, port + 5));
 		}
 		vr_support.ClearCommands();
