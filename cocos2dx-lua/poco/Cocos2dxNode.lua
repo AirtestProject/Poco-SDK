@@ -68,6 +68,8 @@ function Node:getAvailableAttributeNames()
         'tag',
         'desc',
         'rotation',
+        'rotation3D',
+        'skew',
     }
     for _, name in ipairs(AbstractNode.getAvailableAttributeNames(self)) do
         table.insert(ret, name)
@@ -128,9 +130,12 @@ function Node:getAttr(attrName)
     elseif attrName == 'size' then
         -- 转换成归一化坐标系
         local size = self.node:getContentSize()
-        size.width = size.width / self.screenWidth
-        size.height = size.height / self.screenHeight
-        return {size.width, size.height}
+        -- 有些版本的engine对于某类特殊节点会没有这个值，所以要判断
+        if size ~= nil then
+            size.width = size.width / self.screenWidth
+            size.height = size.height / self.screenHeight
+            return {size.width, size.height}
+        end
 
     elseif attrName == 'scale' then
         return {self.node:getScaleX(), self.node:getScaleY()}
@@ -166,10 +171,28 @@ function Node:getAttr(attrName)
         return self.node:getDescription()
 
     elseif attrName == 'rotation' then
-        if self.node.getRotation ~= nil then
-            return self.node:getRotation()
+        local rotationX, rotationY
+        if self.node.getRotationSkewX ~= nil and self.node.getRotationSkewY ~= nil then
+            rotationX, rotationY = self.node:getRotationSkewX(), self.node:getRotationSkewY()
+        end
+        return rotationX or rotationY
+
+    elseif attrName == 'rotation3D' then
+        local rotationX, rotationY
+        if self.node.getRotationSkewX ~= nil and self.node.getRotationSkewY ~= nil then
+            rotationX, rotationY = self.node:getRotationSkewX(), self.node:getRotationSkewY()
+        end
+        if rotationX == rotationY and self.node.getRotation3D then
+            return self.node:getRotation3D()
         end
         return nil
+
+    elseif attrName == 'skew' then
+        if self.node.getSkewX and self.node.getSkewY then
+            return {self.node:getSkewX(), self.node:getSkewY()}
+        end
+        return nil
+
     end
 
     return AbstractNode.getAttr(self, attrName)

@@ -27,7 +27,13 @@ function import(moduleName, currentModuleName)
     return require(moduleFullName)
 end
 
-local socket = _G.socket or require('socket')
+local socket = nil
+xpcall(function() 
+    socket = _G.socket or require('socket.core')
+end, function()
+    -- cocos2dx-lua 里的兼容写法
+    socket = cc.exports.socket
+end)
 local json = import('.support.dkjson')  -- 一定要用这个模块不然字符串发送有问题
 local struct = _G.struct or import('.support.struct')
 
@@ -59,18 +65,21 @@ end
 
 function ClientConnection:input(data)
     self.buf = self.buf .. data
-    if #self.buf > 4 then 
-       local len = struct.unpack('i', string.sub(self.buf, 1, 4))
+    local ret = {}
+    while #self.buf > 4 do 
+        local len = struct.unpack('i', string.sub(self.buf, 1, 4))
         if #self.buf >= len + 4 then
             local content = string.sub(self.buf, 5, 4 + len)
             self.buf = string.sub(self.buf, 5 + len)
             if self.DEBUG then
                 print(content)
             end
-            return json.decode(content)
+            ret[#ret + 1] = json.decode(content)
+        else
+            break
         end
     end
-    return nil
+    return ret
 end
 
 function ClientConnection:receive()
@@ -82,10 +91,12 @@ function ClientConnection:receive()
         self:close()
         return ''
     else
-        local req = self:input(partial or chunk)
-        if req ~= nil then
-            req.client = self
-            return req
+        local reqs = self:input(partial or chunk)
+        if #reqs > 0 then
+            for _, req in ipairs(reqs) do
+                req.client = self
+            end
+            return reqs
         end
     end
 end

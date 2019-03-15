@@ -44,7 +44,12 @@ Selector.prototype.selectImpl = function (cond, multiple, root, maxDepth, onlyVi
                 if (op === '/' && index !== 0) {
                     _maxDepth = 1
                 }
-                midResult = midResult.concat(this.selectImpl(arg, true, parent, _maxDepth, onlyVisibleNode, false))
+                var _res = this.selectImpl(arg, true, parent, _maxDepth, onlyVisibleNode, false)
+                for (var k in _res) {
+                    if (midResult.indexOf(_res[k]) < 0) {
+                        midResult.push(_res[k])
+                    }
+                }
             }
             parents = midResult
         }
@@ -56,13 +61,30 @@ Selector.prototype.selectImpl = function (cond, multiple, root, maxDepth, onlyVi
         var result1 = this.selectImpl(query1, multiple, root, maxDepth, onlyVisibleNode, includeRoot)
         for (var index in result1) {
             var n = result1[index]
-            result.concat(this.selectImpl(query2, multiple, n.getParent(), 1, onlyVisibleNode, includeRoot))
+            var sibling_result = this.selectImpl(query2, multiple, n.getParent(), 1, onlyVisibleNode, includeRoot)
+            for (var k in sibling_result) {
+                if (result.indexOf(sibling_result[k]) < 0) {
+                    result.push(sibling_result[k])
+                }
+            }
         }
     }
     else if (op === 'index') {
         var cond = args[0]
         var i = args[1]
         result = [this.selectImpl(cond, multiple, root, maxDepth, onlyVisibleNode, includeRoot)[i]]
+    }
+    else if (op === '^') {
+        // parent
+        // only select parent of the first matched UI element
+        var query1 = args[0]
+        var result1 = this.selectImpl(query1, false, root, maxDepth, onlyVisibleNode, includeRoot)
+        if (result1.length > 0) {
+            var parent_node = result1[0].getParent()
+            if (parent_node) {
+                result = [parent_node]
+            }
+        }
     }
     else {
         this._selectTraverse(cond, root, result, multiple, maxDepth, onlyVisibleNode, includeRoot)
@@ -80,7 +102,9 @@ Selector.prototype._selectTraverse = function (cond, node, outResult, multiple, 
         // 父子/祖先后代节点选择时，默认是不包含父节点/祖先节点的
         // 在下面的children循环中则需要包含，因为每个child在_selectTraverse中就当做是root
         if (includeRoot) {
-            outResult.push(node)
+            if (outResult.indexOf(node) < 0) {
+                outResult.push(node)
+            }
             if (!multiple) {
                 return true
             }
@@ -104,6 +128,7 @@ Selector.prototype._selectTraverse = function (cond, node, outResult, multiple, 
 
     return false
 }
+
 
 try {
     module.exports = Selector;

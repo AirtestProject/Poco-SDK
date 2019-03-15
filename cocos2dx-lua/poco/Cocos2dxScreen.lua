@@ -28,7 +28,13 @@ function import(moduleName, currentModuleName)
 end
 
 local cc = _G.cc or require('cc')
-local mime = _G.mime or require('mime')
+local mime = nil
+xpcall(function() 
+    mime = _G.mime or require('mime')
+end, function()
+    -- cocos2dx-lua 里的兼容写法
+    mime = cc.exports.mime
+end)
 local IScreen = import('.sdk.IScreen')
 
 local b64encode = nil

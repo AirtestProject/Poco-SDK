@@ -61,7 +61,7 @@ function AbstractNode:enumerateAttrs()
 
     local attrs = {}
     for _, attrName in ipairs(self:getAvailableAttributeNames()) do
-        attrVal = self:getAttr(attrName)
+        local attrVal = self:getAttr(attrName)
         if attrVal ~= nil then
             attrs[attrName] = attrVal
         end

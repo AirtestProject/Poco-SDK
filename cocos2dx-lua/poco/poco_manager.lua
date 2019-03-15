@@ -28,7 +28,13 @@ function import(moduleName, currentModuleName)
 end
 
 local cc = _G.cc or require('cc')
-local socket = _G.socket or require('socket')
+local socket = nil
+xpcall(function() 
+    socket = _G.socket or require('socket.core')
+end, function()
+    -- cocos2dx-lua 里的兼容写法
+    socket = cc.exports.socket
+end)
 local VERSION = import('.POCO_SDK_VERSION')
 local Dumper = import('.Cocos2dxFrozenDumper')
 local Screen = import('.Cocos2dxScreen')
@@ -49,7 +55,12 @@ PocoManager.clients = {}
 -- rpc 方法统一才是Pascal命名方式，其实是为了跟unity3d里使用的poco-sdk命名相同
 local dispatcher = {
     GetSDKVersion = function() return VERSION end,
-    Dump = function() return Dumper:dumpHierarchy() end,
+    Dump = function(onlyVisibleNode) 
+        if onlyVisibleNode == nil then
+            onlyVisibleNode = true
+        end
+        return Dumper:dumpHierarchy(onlyVisibleNode)
+    end,
     Screenshot = function(width)
         width = width or 720
         return Screen:getScreen(width) 
@@ -102,13 +113,15 @@ function PocoManager:server_loop()
                 self.clients[client_sock] = ClientConnection:new(client_sock, self.DEBUG)
             else
                 local client = self.clients[v]
-                local req = client:receive()
-                if req == '' then
+                local reqs = client:receive()
+                if reqs == '' then
                     -- client is gone
                     self.clients[v] = nil
                     table.insert(removed_socks, v)
-                elseif req ~= nil then
-                    self:onRequest(req)
+                elseif reqs ~= nil then
+                    for _, req in ipairs(reqs) do
+                        self:onRequest(req)
+                    end
                 end
             end
         end
