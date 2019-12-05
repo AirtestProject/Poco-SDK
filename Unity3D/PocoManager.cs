@@ -73,6 +73,10 @@ public class PocoManager : MonoBehaviour
             }
             catch (SocketException e)
             {
+                Debug.Log(string.Format("Tcp server bind to port {0} Failed!", server.Port));
+                Debug.Log("--- Failed Trace Begin ---");
+                Debug.LogError(e);
+                Debug.Log("--- Failed Trace End ---");
                 // try next available port
                 this.server = null;
             }
@@ -210,6 +214,13 @@ public class PocoManager : MonoBehaviour
         // stop listening thread
         stopListening();
     }
+
+    void OnDestroy()
+    {
+        // stop listening thread
+        stopListening();
+    }
+
 }
 
 
