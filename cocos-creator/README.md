@@ -1,0 +1,1 @@
+require cocos-creator 2.2.1 or higher
