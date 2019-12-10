@@ -1,10 +1,10 @@
 // var cc = cc
 
-// var AbstractDumper = require('./sdk/AbstractDumper')
-// var Node = require('./Cocos2dxNode')
+var AbstractDumper = require('./sdk/AbstractDumper')
+var Node = require('./Cocos2dxNode')
 
-var AbstractDumper = window.AbstractDumper
-var Node = window.Node
+// var AbstractDumper = window.AbstractDumper
+// var Node = window.Node
 
 var Dumper = function () {
     AbstractDumper.call(this)

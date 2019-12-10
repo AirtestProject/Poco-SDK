@@ -1,7 +1,7 @@
 // var cc = cc
 
-// var AbstractNode = require('./sdk/AbstractNode')
-var AbstractNode = window.AbstractNode
+var AbstractNode = require('./sdk/AbstractNode')
+// var AbstractNode = window.AbstractNode
 
 var Vec2 = cc.Vec2 || cc.math.Vec2 || cc.math.Vec3
 
@@ -144,9 +144,15 @@ Node.prototype.getAttr = function (attrName) {
         return [anchor.x, 1 - anchor.y]
     }
     else if (attrName === 'zOrders') {
+        
+        var globalz = cgetter(this.node, 'globalZOrder')
+        if(globalz==undefined){
+            globalz = cgetter(this.node, 'localZOrder') // 新版creator去掉了globalzorder，因此使用local来代替
+        }
+        
         return {
             local: cgetter(this.node, 'localZOrder'), 
-            global: cgetter(this.node, 'globalZOrder'),
+            global: globalz,
         }
     }
     else if (attrName == 'touchable') {
