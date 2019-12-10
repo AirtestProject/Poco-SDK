@@ -1,5 +1,5 @@
-var DefaultMatcher = require('./DefaultMatcher')
-//var DefaultMatcher = window.DefaultMatcher
+// var DefaultMatcher = require('./DefaultMatcher')
+var DefaultMatcher = window.DefaultMatcher
 
 var ISelector = function () {
 }
