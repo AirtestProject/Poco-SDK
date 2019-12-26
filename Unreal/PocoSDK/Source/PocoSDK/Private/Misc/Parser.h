@@ -9,6 +9,7 @@ namespace Poco
 	class FJsonParser
 	{
 	public:
+
 		/** 
 		 * Gets the method field of a jsonrpc 2.0 request.
 		 * Returns false if the field does not exist or cannot be converted.

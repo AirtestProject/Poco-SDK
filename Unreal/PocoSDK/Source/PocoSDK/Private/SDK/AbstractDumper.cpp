@@ -16,7 +16,7 @@ namespace Poco
 
 	TSharedPtr<FJsonObject> AbstractDumper::DumpHierarchyImplementation(AbstractNode* Node, bool bOnlyVisibleNode)
 	{
-		if (Node == nullptr)
+		if (!Node)
 		{
 			return nullptr;
 		}
@@ -32,8 +32,8 @@ namespace Poco
 		// set the payload field
 		Result->SetObjectField("payload", Payload);
 
-		// set the children field recursively
 		TArray<AbstractNode*> Children = Node->GetChildren();
+
 		TArray< TSharedPtr<FJsonValue> > ChildrenJson;
 
 		for (AbstractNode* Child : Children)
@@ -41,8 +41,9 @@ namespace Poco
 			bool bVisible;
 			Child->GetAttribute("visible", bVisible);
 
-			if (bVisible)
+			if (!bOnlyVisibleNode || bVisible)
 			{
+				// Add child nodes recursively
 				TSharedPtr<FJsonValue> ChildJson = MakeShareable(new FJsonValueObject(DumpHierarchyImplementation(Child, bOnlyVisibleNode)));
 				ChildrenJson.Add(ChildJson);
 			}

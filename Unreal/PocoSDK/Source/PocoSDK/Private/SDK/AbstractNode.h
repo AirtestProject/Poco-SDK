@@ -17,7 +17,8 @@ namespace Poco
 		AbstractNode();
 
 		/** Destructor. */
-		virtual ~AbstractNode(){}
+		virtual ~AbstractNode()
+		{}
 
 		/**
 		 * Virtual that can be overridden by the inheriting class.

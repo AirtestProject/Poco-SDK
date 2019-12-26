@@ -17,7 +17,12 @@
 		{
 			"Name": "PocoSDK",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostEngineInit",
+			"WhitelistPlatforms":
+			[
+				"Win64",
+				"Android"
+			]
 		}
 	]
 }

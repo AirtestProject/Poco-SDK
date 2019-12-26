@@ -64,9 +64,10 @@ namespace Poco
 
 		while (!Stopping)
 		{
-			HandleRequest();
-
-			SendResponse();
+			if (HandleRequest())
+			{
+				SendResponse();
+			}
 
 			FPlatformProcess::Sleep(SleepTime.GetSeconds());
 		}
@@ -96,13 +97,10 @@ namespace Poco
 
 	bool FPocoWorker::HandleRequest()
 	{
-
 		FString Request;
 
 		if (!GetJsonString(Socket, Request))
 		{
-			UE_LOG(PocoLog, Error, TEXT("Failed to get request."));
-			
 			return false;
 		}
 
@@ -110,25 +108,22 @@ namespace Poco
 
 		if (!FJsonParser::GetMethod(Request, Method))
 		{
-			UE_LOG(PocoLog, Error, TEXT("Failed to read command with request %s."), *Request);
-
 			return false;
 		}
 		else if (Method.Equals(TEXT("GetSDKVersion"), ESearchCase::IgnoreCase))
 		{
-			Response->SetStringField("result", "1.0");
+			Response->SetStringField(TEXT("result"), SDKVersion);
 		}
 		else if (Method.Equals(TEXT("Dump"), ESearchCase::IgnoreCase))
 		{
 			UE4Dumper* Dumper = new UE4Dumper();
 			TSharedPtr<FJsonObject> Result = Dumper->DumpHierarchy();
 
-			Response->SetObjectField("result", Result);
+			Response->SetObjectField(TEXT("result"), Result);
 		}
 
 		if (!FJsonParser::GetId(Request, Id))
 		{
-			UE_LOG(PocoLog, Error, TEXT("Failed to read id with request %s."), *Request);
 			return false;
 		}
 
@@ -148,29 +143,28 @@ namespace Poco
 		TSharedRef<FCondensedJsonStringWriter> Writer = FCondensedJsonStringWriterFactory::Create(&Output);
 		FJsonSerializer::Serialize(Response.ToSharedRef(), Writer);
 
-		FTCHARToUTF8 ResponseBin(*Output);
+		FTCHARToUTF8 Message(*Output);
+		
+		int32 BytesSent = 0;
+		int32 Length = Message.Length();
 
-		int32 SendSize = 0;
-		int32 TotalSend = 0;
-		int32 Length = ResponseBin.Length();
-
-		bool result = Socket->Send(reinterpret_cast<const uint8*>(&Length), 4, SendSize);
-
-		if (!result)
+		// Send header
+		Socket->Send(reinterpret_cast<const uint8*>(&Length), 4, BytesSent);
+		
+		if (BytesSent <= 0)
 		{
 			return false;
 		}
 
-		SendSize = 0;
+		// Send payload
+		BytesSent = 0;
+		Socket->Send(reinterpret_cast<const uint8*>(Message.Get()), Length, BytesSent);
 
-		while (TotalSend < Length) {
-			result = Socket->Send(reinterpret_cast<const uint8*>(ResponseBin.Get()) + TotalSend, Length, SendSize);
-			if (!result)
-			{
-				return false;
-			}
-			TotalSend += SendSize;
+		if (BytesSent <= 0)
+		{
+			return false;
 		}
+
 		return true;
 	}
 }

@@ -44,7 +44,7 @@ namespace Poco
 		AnchorPoint.Add(MakeShareable(new FJsonValueNumber(0.5f)));
 		AvailableAttributes->SetArrayField(TEXT("anchorPoint"), AnchorPoint);
 
-		// default zOrders
+		// default z-orders
 		TSharedPtr< FJsonObject > ZOrders = MakeShareable(new FJsonObject);
 		ZOrders->SetNumberField(TEXT("local"), 0);
 		ZOrders->SetNumberField(TEXT("global"), 0);
@@ -124,7 +124,7 @@ namespace Poco
 			Result->SetArrayField(TEXT("anchorPoint"), *AnchorPoint);
 		}
 
-		// set Z-orders
+		// set z-orders
 		const TSharedPtr< FJsonObject >* ZOrders;
 		if (AbstractNode::GetAttribute(TEXT("zOrders"), ZOrders))
 		{

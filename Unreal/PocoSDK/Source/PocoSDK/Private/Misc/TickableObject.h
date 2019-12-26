@@ -19,7 +19,7 @@ namespace Poco {
 		/**
 		* Creates and initializes a new instance from the owner.
 		*
-		* @param _Owner The parent class that owns this tickable object.
+		* @param Parent The parent class that owns this tickable object.
 		*/
 		FTickableObject(FPocoManager* Manager)
 			:Parent(Manager) {}
