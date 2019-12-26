@@ -1,7 +1,6 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
 #include "Converter.h"
-#include "PocoSDK.h"
 
 namespace Poco
 {
@@ -26,7 +25,6 @@ namespace Poco
 
 		if (!InSocket)
 		{
-			UE_LOG(PocoLog, Warning, TEXT("Socket nullptr."));
 			return false;
 		}
 
@@ -60,7 +58,6 @@ namespace Poco
 
 		if (Payload.Num() <= 0)
 		{
-			UE_LOG(PocoLog, Error, TEXT("Request body has length %d."), Payload.Num());
 			return false;
 		}
 

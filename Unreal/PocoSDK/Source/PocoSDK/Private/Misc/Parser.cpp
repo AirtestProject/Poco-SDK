@@ -5,7 +5,6 @@
 #include "Serialization/JsonTypes.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
-#include "PocoSDK.h"
 
 namespace Poco
 {

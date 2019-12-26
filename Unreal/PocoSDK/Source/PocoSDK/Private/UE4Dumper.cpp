@@ -23,12 +23,13 @@ namespace Poco
 			if (UserWidget != nullptr)
 			{
 				// Call GetRootWidget() on the first non-null user widget.
-				UWidget* RootWidget = UserWidget->WidgetTree->RootWidget;
+				UWidget* RootWidget = UserWidget->GetRootWidget();
 
 				if (RootWidget != nullptr)
 				{
-					AbstractNode* Root = (AbstractNode*) new UE4Node(RootWidget);
-					Roots.Add(Root);
+					UE4Node* Root = new UE4Node(RootWidget->GetName());
+
+					Roots.Add((AbstractNode*)Root);
 
 					return;
 				}

@@ -20,6 +20,7 @@ namespace Poco
 	class FPocoManager
 	{
 	public:
+
 		/** Creates and initializes a new instance of Poco manager. */
 		FPocoManager();
 
@@ -131,5 +132,8 @@ namespace Poco
 
 		/** Holds a flag indicating that the thread is stopping. */
 		bool Stopping;
+
+		/** Holds the SDK version number as a string. */
+		FString SDKVersion = TEXT("1.0");
 	};
 }
