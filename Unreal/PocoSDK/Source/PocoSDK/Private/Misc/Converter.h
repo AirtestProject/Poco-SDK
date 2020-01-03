@@ -9,7 +9,7 @@ namespace Poco
 {
 	/**
 	 * Creates a string from a byte array.
-	 * https://wiki.unrealengine.com/TCP_Socket_Listener,_Receive_Binary_Data_From_an_IP/Port_Into_UE4,_%28Full_Code_Sample%29
+	 * Reference: https://wiki.unrealengine.com/TCP_Socket_Listener,_Receive_Binary_Data_From_an_IP/Port_Into_UE4,_%28Full_Code_Sample%29
 	 *
 	 * @param BinaryArray The byte array to be converted into a string.
 	 * @return The string created from the byte array.

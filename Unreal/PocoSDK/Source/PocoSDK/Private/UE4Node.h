@@ -6,7 +6,6 @@
 #include "SDK/AbstractNode.h"
 #include "Components/Widget.h"
 #include "Blueprint/WidgetTree.h"
-#include "UObject/UObjectIterator.h"
 
 namespace Poco
 {
@@ -159,7 +158,7 @@ namespace Poco
 		/**
 		 * Gets the z-order on the slot.
 		 *
-		 * @param OutString The name of the widget.
+		 * @param OutObject The name of the widget.
 		 * @return true on success, false otherwise.
 		 */
 		bool GetZOrder(const TSharedPtr< FJsonObject >*& OutObject);
@@ -175,7 +174,6 @@ namespace Poco
 		/**
 		 * Gets the widget tree.
 		 *
-		 * @param W The widget.
 		 * @return A pointer to the widget tree.
 		 */
 		UWidgetTree* GetWidgetTree();
