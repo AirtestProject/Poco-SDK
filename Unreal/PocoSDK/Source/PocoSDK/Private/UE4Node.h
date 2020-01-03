@@ -6,7 +6,6 @@
 #include "SDK/AbstractNode.h"
 #include "Components/Widget.h"
 #include "Blueprint/WidgetTree.h"
-#include "UObject/UObjectIterator.h"
 
 namespace Poco
 {
@@ -20,8 +19,8 @@ namespace Poco
 		 *
 		 * @param Name The name of the widget to create a node for.
 		 */
-		UE4Node(FString Name)
-			:NodeName(Name)
+		UE4Node(UWidget* W)
+			: Widget(W)
 		{}
 
 		/** Destructor. */
@@ -94,8 +93,8 @@ namespace Poco
 
 	private:
 
-		/** Holds the name of the widget. */
-		FString NodeName;
+		/** Holds the widget. */
+		UWidget* Widget;
 
 		/** Holds the position of the widget as a json value array. */
 		TArray< TSharedPtr<FJsonValue> > PositionJson;
@@ -106,37 +105,24 @@ namespace Poco
 		/** Holds the scale of the widget as a json value array. */
 		TArray< TSharedPtr<FJsonValue> > ScaleJson;
 
-		/** Holds the z-order of the widget. */
-		TSharedPtr<FJsonObject> ZOrders = MakeShareable(new FJsonObject);
-
-		/**
-		 * Gets the widget from the given name.
-		 *
-		 * @param Name the name of the widget.
-		 * @return The widget with the given name.
-		 */
-		UWidget* GetWidget(const FString& Name);
-
-		/**
-		 * Gets the widget tree.
-		 *
-		 * return A pointer to the widget tree.
-		 */
-		UWidgetTree* GetWidgetTree();
+		/** Holds the z-orders of the widget as a json value object. */
+		TSharedPtr<FJsonObject> ZOrderJson = MakeShareable(new FJsonObject);;
 
 		/**
 		 * Gets the name of the widget.
 		 *
-		 * @return The name of the widget.
+		 * @param OutString The name of the widget.
+		 * @return true on success, false otherwise.
 		 */
-		FString GetName();
+		bool GetName(FString& OutString);
 
 		/**
 		 * Gets the type of the widget.
 		 *
-		 * @return The type of the widget.
+		 * @param OutString The type of the widget.
+		 * @return true on success, false otherwise.
 		 */
-		FString GetType();
+		bool GetType(FString& OutString);
 
 		/**
 		 * Gets the current visibility of the widget.
@@ -148,36 +134,48 @@ namespace Poco
 		/**
 		 * Gets the position of the widget.
 		 *
-		 * @return The position of the widget as a json value array.
+		 * @param OutArray The position of the widget as a json value array.
+		 * @return true on success, false otherwise.
 		 */
 		bool GetPosition(const TArray< TSharedPtr< FJsonValue > >*& OutArray);
 
 		/**
 		 * Gets the size of the widget.
 		 *
-		 * @return The size of the widget as a json value array.
+		 * @param OutArray The size of the widget  .
+		 * @return true on success, false otherwise.
 		 */
 		bool GetSize(const TArray< TSharedPtr< FJsonValue > >*& OutArray);
 
 		/**
 		 * Gets the scale of the widget.
 		 *
-		 * @return The scale of the widget as a json value array.
+		 * @param OutArray The scale of the widget as a json value array.
+		 * @return true on success, false otherwise.
 		 */
 		bool GetScale(const TArray< TSharedPtr< FJsonValue > >*& OutArray);
 
 		/**
 		 * Gets the z-order on the slot.
 		 *
-		 * @return The z-order on the slot
+		 * @param OutObject The name of the widget.
+		 * @return true on success, false otherwise.
 		 */
-		const TSharedPtr< FJsonObject > GetZOrder();
+		bool GetZOrder(const TSharedPtr< FJsonObject >*& OutObject);
 
 		/**
 		 * Gets the widget text.
 		 *
-		 * @return The widget text.
+		 * @param OutString The text of the widget.
+		 * @return true on success, false otherwise.
 		 */
 		bool GetText(FString& OutString);
+
+		/**
+		 * Gets the widget tree.
+		 *
+		 * @return A pointer to the widget tree.
+		 */
+		UWidgetTree* GetWidgetTree();
 	};
 }

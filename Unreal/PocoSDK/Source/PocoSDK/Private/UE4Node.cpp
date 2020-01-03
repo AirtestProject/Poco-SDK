@@ -9,7 +9,8 @@
 #include "Components/RichTextBlock.h"
 #include "Components/TextBlock.h"
 #include "Components/TextWidgetTypes.h"
-#include "Engine.h"
+#include "UObject/UObjectBase.h"
+#include "UObject/UObjectIterator.h"
 
 namespace Poco
 {
@@ -17,25 +18,50 @@ namespace Poco
 	{
 		AbstractNode* Parent = nullptr;
 
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (Widget)
 		{
-			Parent = new UE4Node(Widget->GetParent()->GetName());
+			if (UPanelWidget* ParentWidget = Widget->GetParent())
+			{
+				Parent = new UE4Node(Widget->GetParent());
+			}
+			else
+			{
+				if (UWidgetTree* ParentWidgetTree = Cast<UWidgetTree>(Widget->GetOuter()))
+				{
+					if (UUserWidget* ParentUserWidget = Cast<UUserWidget>(ParentWidgetTree->GetOuter()))
+					{
+						Parent = new UE4Node(ParentUserWidget);
+					}
+				}
+			}
 		}
 
 		return Parent;
 	}
 
-	UWidgetTree* UE4Node::GetWidgetTree() {
-
-		for (TObjectIterator<UUserWidget> Itr; Itr; ++Itr)
+	UWidgetTree* UE4Node::GetWidgetTree()
+	{
+		if (Widget)
 		{
-			UUserWidget* UserWidget = *Itr;
-
-			if (UserWidget)
+			if (UUserWidget* UserWidget = Cast<UUserWidget>(Widget))
 			{
-				return UserWidget->WidgetTree;
+				if (UserWidget->WidgetTree)
+				{
+					return UserWidget->WidgetTree;
+				}
+			}
+			else
+			{
+				if (UWidgetTree* ParentWidgetTree = Cast<UWidgetTree>(Widget->GetOuter()))
+				{
+					if (UUserWidget* ParentUserWidget = Cast<UUserWidget>(ParentWidgetTree->GetOuter()))
+					{
+						if (ParentUserWidget->WidgetTree)
+						{
+							return ParentUserWidget->WidgetTree;
+						}
+					}
+				}
 			}
 		}
 
@@ -44,24 +70,33 @@ namespace Poco
 
 	TArray<AbstractNode*> UE4Node::GetChildren()
 	{
-		TArray<UWidget*> Widgets;
-
-		UWidget* Widget = GetWidget(NodeName);
-
-		GetWidgetTree()->GetChildWidgets(Widget, Widgets);
-
 		TArray<AbstractNode*> Children;
 
-		for (UWidget* Child : Widgets)
+		if (Widget)
 		{
-			UPanelWidget* ParentWidget = Child->GetParent();
+			TArray<UWidget*> Widgets;
 
-			// GetChildWidgets() returns all descendants.
-			// Check for parent widget to get direct child nodes.
-			if (Widget == ParentWidget)
+			if (UUserWidget* UserWidget = Cast<UUserWidget>(Widget))
 			{
-				AbstractNode* ChildNode = new UE4Node(Child->GetName());
-				Children.Add(ChildNode);
+				GetWidgetTree()->GetAllWidgets(Widgets);
+			}
+			else
+			{
+				GetWidgetTree()->GetChildWidgets(Widget, Widgets);
+			}
+
+			for (UWidget* Child : Widgets)
+			{
+				if (Child)
+				{
+					UPanelWidget* ParentWidget = Child->GetParent();
+
+					if (!ParentWidget || Widget == ParentWidget)
+					{
+						AbstractNode* ChildNode = new UE4Node(Child);
+						Children.Add(ChildNode);
+					}
+				}
 			}
 		}
 
@@ -70,8 +105,6 @@ namespace Poco
 
 	bool UE4Node::GetAttribute(const FString& AttrName, FString& OutString)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -79,13 +112,11 @@ namespace Poco
 
 		if (AttrName.Equals(TEXT("name"), ESearchCase::IgnoreCase))
 		{
-			OutString = GetName();
-			return true;
+			return GetName(OutString);
 		}
 		else if (AttrName.Equals(TEXT("type"), ESearchCase::IgnoreCase))
 		{
-			OutString = GetType();
-			return true;
+			return GetType(OutString);
 		}
 		else if (AttrName.Equals(TEXT("text"), ESearchCase::IgnoreCase))
 		{
@@ -97,8 +128,6 @@ namespace Poco
 
 	bool UE4Node::GetAttribute(const FString& AttrName, bool& OutBool)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -115,8 +144,6 @@ namespace Poco
 
 	bool UE4Node::GetAttribute(const FString& AttrName, const TArray< TSharedPtr< FJsonValue > >*& OutArray)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -141,8 +168,6 @@ namespace Poco
 
 	bool UE4Node::GetAttribute(const FString& AttrName, const TSharedPtr< FJsonObject >*& OutObject)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -150,13 +175,7 @@ namespace Poco
 
 		if (AttrName.Equals(TEXT("zOrders"), ESearchCase::IgnoreCase))
 		{
-			if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(Widget->Slot))
-			{
-				ZOrders = GetZOrder();
-				OutObject = &ZOrders;
-				return true;
-			}
-			return false;
+			return GetZOrder(OutObject);
 		}
 
 		return false;
@@ -226,23 +245,36 @@ namespace Poco
 		return Result;
 	}
 
-	FString UE4Node::GetName()
+	bool UE4Node::GetName(FString& OutString)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
+		if (!Widget)
+		{
+			return false;
+		}
 
-		return Widget->GetName();
+		OutString = Widget->GetName();
+
+		return true;
 	}
 
-	FString UE4Node::GetType()
+	bool UE4Node::GetType(FString& OutString)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
+		if (Widget && Widget->GetClass())
+		{
+			OutString = Widget->GetClass()->GetDefaultObjectName().ToString();
 
-		return Widget->GetClass()->GetDefaultObjectName().ToString();
+			return true;
+		}
+
+		return false;
 	}
 
 	bool UE4Node::IsVisible()
 	{
-		const UWidget* Widget = GetWidget(NodeName);
+		if (!Widget)
+		{
+			return false;
+		}
 
 		bool bVisible = ((Widget->Visibility == ESlateVisibility::Visible)
 			|| (Widget->Visibility == ESlateVisibility::HitTestInvisible)
@@ -253,8 +285,6 @@ namespace Poco
 
 	bool UE4Node::GetPosition(const TArray< TSharedPtr< FJsonValue > >*& OutArray)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -291,8 +321,6 @@ namespace Poco
 
 	bool UE4Node::GetSize(const TArray< TSharedPtr< FJsonValue > >*& OutArray)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -314,8 +342,6 @@ namespace Poco
 
 	bool UE4Node::GetScale(const TArray< TSharedPtr< FJsonValue > >*& OutArray)
 	{
-		const UWidget* Widget = GetWidget(NodeName);
-
 		if (!Widget)
 		{
 			return false;
@@ -331,26 +357,34 @@ namespace Poco
 		return true;
 	}
 
-	const TSharedPtr< FJsonObject > UE4Node::GetZOrder()
+	bool UE4Node::GetZOrder(const TSharedPtr< FJsonObject >*& OutObject)
 	{
-		TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
-		
-		const UWidget* Widget = GetWidget(NodeName);
+		if (!Widget)
+		{
+			return false;
+		}
 		
 		if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(Widget->Slot))
 		{
 			int32 ZOrder = Slot->GetZOrder();
 
-			Result->SetNumberField(TEXT("local"), ZOrder);
-			Result->SetNumberField(TEXT("global"), ZOrder);
+			ZOrderJson->SetNumberField(TEXT("local"), ZOrder);
+			ZOrderJson->SetNumberField(TEXT("global"), ZOrder);
+
+			OutObject = &ZOrderJson;
+
+			return true;
 		}
 		
-		return Result;
+		return false;
 	}
 
 	bool UE4Node::GetText(FString& OutString)
 	{
-		UWidget* Widget = GetWidget(NodeName);
+		if (!Widget)
+		{
+			return false;
+		}
 
 		if (UMultiLineEditableText* MultiLineEditableText = Cast<UMultiLineEditableText>(Widget))
 		{
@@ -377,24 +411,5 @@ namespace Poco
 		}
 
 		return false;
-	}
-
-	UWidget* UE4Node::GetWidget(const FString& Name)
-	{
-		for (TObjectIterator<UUserWidget> Itr; Itr; ++Itr)
-		{
-			UUserWidget* UserWidget = *Itr;
-
-			if (UserWidget && UserWidget->GetIsVisible() && UserWidget->WidgetTree)
-			{
-				UWidget* Widget = UserWidget->GetWidgetFromName(FName(*Name));
-
-				if (Widget)
-				{
-					return Widget;
-				}
-			}
-		}
-		return nullptr;
 	}
 }
