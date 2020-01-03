@@ -10,6 +10,7 @@
 #include "Components/TextBlock.h"
 #include "Components/TextWidgetTypes.h"
 #include "UObject/UObjectBase.h"
+#include "UObject/UObjectIterator.h"
 
 namespace Poco
 {
@@ -48,7 +49,6 @@ namespace Poco
 				{
 					return UserWidget->WidgetTree;
 				}
-
 			}
 			else
 			{
@@ -63,7 +63,6 @@ namespace Poco
 					}
 				}
 			}
-			
 		}
 
 		return nullptr;
@@ -382,7 +381,10 @@ namespace Poco
 
 	bool UE4Node::GetText(FString& OutString)
 	{
-		//UWidget* Widget = GetWidget(NodeName);
+		if (!Widget)
+		{
+			return false;
+		}
 
 		if (UMultiLineEditableText* MultiLineEditableText = Cast<UMultiLineEditableText>(Widget))
 		{

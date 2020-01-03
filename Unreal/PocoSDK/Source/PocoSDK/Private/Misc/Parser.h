@@ -34,7 +34,7 @@ namespace Poco
 		 * Gets the boolean parameter field of a jsonrpc 2.0 request.
 		 * Returns false if the field does not exist or cannot be converted.
 		 *
-		 * @param InString The jsonrpc 2.0 request.
+		 * @param Json The jsonrpc 2.0 request.
 		 * @param OutBool The field's value as a boolean.
 		 * @return false if the field does not exist or cannot be converted, true otherwise.
 		 */
@@ -47,7 +47,8 @@ namespace Poco
 		 *
 		 * @param Json The Json-formatted string.
 		 * @param Key The name of the field to get.
-		 * @return The field's value as a string, or an empty string if the field does not exist.
+		 * @param OutString The fields value as a string.
+		 * @return false if the field does not exist or cannot be converted, true otherwise.
 		 */
 		static bool GetStringByKey(const FString& Json, const FString& Key, FString& OutString);
 	};

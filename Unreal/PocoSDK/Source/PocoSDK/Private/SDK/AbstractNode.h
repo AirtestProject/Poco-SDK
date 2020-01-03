@@ -42,6 +42,7 @@ namespace Poco
 		}
 
 		/**
+		 * Virtual that can be overridden by the inheriting class.
 		 * Gets available attributes and their values.
 		 *
 		 * @return Available attributes and their values as a json object.
@@ -49,34 +50,42 @@ namespace Poco
 		virtual TSharedPtr<FJsonObject> EnumerateAttributes();
 
 		/**
+		 * Virtual that can be overridden by the inheriting class.
 		 * Gets the value of the attribute as a string.
 		 *
 		 * @param AttrName The name of the attribute.
 		 * @param OutString The value of the attribute as a string.
+		 * @return true on success, false otherwise.
 		 */
 		virtual bool GetAttribute(const FString& AttrName, FString& OutString);
 
 		/**
+		 * Virtual that can be overridden by the inheriting class.
 		 * Gets the value of the attribute as a boolean.
 		 *
 		 * @param AttrName The name of the attribute.
 		 * @param OutBool The value of the attribute as a boolean.
+		 * @return true on success, false otherwise.
 		 */
 		virtual bool GetAttribute(const FString& AttrName, bool& OutBool);
 
 		/**
+		 * Virtual that can be overridden by the inheriting class.
 		 * Gets the value of the attribute as an array.
 		 *
 		 * @param AttrName The name of the attribute.
 		 * @param OutArray The value of the attribute as an array.
+		 * @return true on success, false otherwise.
 		 */
 		virtual bool GetAttribute(const FString& AttrName, const TArray< TSharedPtr< FJsonValue > >*& OutArray);
 
 		/**
+		 * Virtual that can be overridden by the inheriting class.
 		 * Gets the value of the attribute as an object.
 		 *
 		 * @param AttrName The name of the attribute.
 		 * @param OutObject The value of the attribute as an object.
+		 * @return true on success, false otherwise.
 		 */
 		virtual bool GetAttribute(const FString& AttrName, const TSharedPtr< FJsonObject >*& OutObject);
 
