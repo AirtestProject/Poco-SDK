@@ -152,7 +152,10 @@ public class PocoManager : MonoBehaviour
     public void stopListening()
     {
         mRunning = false;
-        server?.Stop();
+        if (this.server != null)
+        {
+            server.Stop();
+        }
     }
 
     [RPC]
