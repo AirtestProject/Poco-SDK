@@ -26,6 +26,8 @@ namespace Poco
             { "Selectable", "Selectable" },
             { "Camera", "Camera" },
             { "RectTransform", "Node" },
+	    { "TextMeshProUGUI","TMPROUGUI" },
+            { "TMP_Text","TMPRO" },
         };
         public static string DefaultTypeName = "GameObject";
         private GameObject gameObject;
@@ -212,8 +214,13 @@ namespace Poco
 
         private string GameObjectText()
         {
+            TMP_Text tmpText = gameObject.GetComponent<TMP_Text>();
+            if (tmpText) return tmpText.GetParsedText();
+            TextMeshProUGUI tmpUIText = gameObject.GetComponent<TextMeshProUGUI>();
+            if (tmpUIText) return tmpUIText.GetParsedText();
             Text text = gameObject.GetComponent<Text>();
-            return text ? text.text : null;
+            if (text) return text.text;
+            return null;
         }
 
         private string GameObjectTag()
