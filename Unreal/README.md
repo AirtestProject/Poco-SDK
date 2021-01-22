@@ -30,7 +30,7 @@
     ```
     如果测的是打包版的游戏，连接方法与其他引擎的游戏一致，具体方法请见[官方文档](https://airtest.doc.io.netease.com/IDEdocs/device_connection/1_android_phone_connection/)。
     
-    如果想用编辑器模式连接，可以在初始化`Poco`的时候传入参数,
+    如果想用编辑器模式连接，可以在初始化`Poco`的时候传入参数, 此时编辑器语言需设置为英文。
     ```
     poco = UE4Poco(ue4_editor=True)
     ```
@@ -42,7 +42,7 @@
     dev = connect_device("Windows:///?class_name=UnrealWindow&title_re=.*Game Preview Standalone.*")
     ```
     ![image](Images/Window.png)
-    
+    UE4引擎版本号在4.26以上，UE4窗口名"Game Preview Standalone"已经修改为Preview [NetMode: Standalone]。
 
 #### 一些常见的问题：
 
@@ -50,4 +50,10 @@
 
     确认 `Poco SDK `为 `Enabled` 的状态。
     确认 `.uproject` 文件中包含有`Poco SDK`, 且为Enabled状态。
-    
+
+2. UE4选择Standalone Game运行游戏无法获取UI树
+
+    请使用编辑器模式运行游戏，或直接打包运行。
+3. UE4打包windows版本游戏运行时无法获取UI树
+
+    运行游戏先需要先关闭UE4编辑器。
