@@ -13,7 +13,7 @@
 
 #### 使用方法
 
-1. 更新最新版的Poco，指令为
+1. 更新最新版的Poco，指令为：
     ```
     pip install --upgrade pocoui
     ```
@@ -56,9 +56,9 @@
     确认 `Poco SDK `为 `Enabled` 的状态。
     确认 `.uproject` 文件中包含有`Poco SDK`, 且为Enabled状态。
 
-2. UE4选择`Standalone Game`运行游戏无法获取UI树
+2. UE4选择`Standalone Game`运行游戏无法获取UI树。
 
     这个问题是由于插件的type为Runtime, 导致插件在编辑器运行时启动，无法获取独立进程的游戏。请使用编辑器模式运行游戏，或直接打包运行。
-3. UE4打包`windows版本`游戏运行时无法获取UI树
+3. UE4打包`windows版本`游戏运行时无法获取UI树。
 
     运行游戏先需要先关闭UE4编辑器。
