@@ -62,3 +62,67 @@
 3. UE4打包`windows版本`游戏运行时无法获取UI树。
 
     运行游戏先需要先关闭UE4编辑器。
+
+#### Access steps
+1. From [UE4 Poco SDK](https://github.com/AirtestProject/Poco-SDK/tree/master/Unreal), git the directory `PocoSDK`, put the `PocoSDK` into `Plugins`. If your project does not have a directory named `Plugins`, you need to create the directory first.
+
+2. Recompile the project. Make sure you can see the `Poco SDK` in the editor's `Edit> Plugins`, and `Enabled` is checked.
+
+    If `Enabled` is not checked at this time, please check `Enabled` and restart the editor/VS as prompted.
+    
+    ![image](Images/PocoSDK.png)
+    
+3. run or package the game.
+
+
+#### Instructions
+
+1. Update the latest version of Poco, the instruction is：
+    ```
+    pip install --upgrade pocoui
+    ```
+    Note that the package name is `pocoui`, not `poco`. After the update, please confirm that the version number of `poco` is at least 1.0.79.
+    
+2. Connect the game.
+
+    Start the game process and get the UI tree in the IDE.
+    
+    ![image](Images/UI.png)
+    
+    As shown in the figure, there is only `root` in the UI tree which fails to get UI.
+    
+    The specific usage at the script level is as follows：
+    ```
+    from poco.drivers.ue4 import UE4Poco
+    poco = UE4Poco()
+    # example
+    poco("StartButton").click()
+    ```
+    If you want to connect in editor mode, you can pass in parameters when initializing `Poco`, at this time the editor language needs to be set to English.
+    ```
+    poco = UE4Poco(ue4_editor=True)
+    ```
+    
+    ![image](Images/Modes.png)
+    
+    The window connected in this way is the editor PIE independent window mode, If it fails, you can modify the handle of the connected device under `poco/drivers/ue4/device.py`. For example, the following code is to connect to the window with `Game Preview Standalone` in the UE4 window.
+    ```
+    dev = connect_device("Windows:///?class_name=UnrealWindow&title_re=.*Game Preview Standalone.*")
+    ```
+    ![image](Images/Window.png)
+    The UE4 engine version number is above 4.26, and the UE4 window name "Game Preview Standalone" has been modified to Preview [NetMode: Standalone].
+    
+
+#### Some common problems：
+
+1. `Poco SDK` failed to start normally.
+
+    Confirm that `Poco SDK` is in the state of `Enabled`.
+    Make sure that the `.uproject` file contains `Poco SDK` and is in the Enabled state.
+
+2. UE4 chooses `Standalone Game` to run the game and cannot get the UI tree.
+
+    This problem is because the plug-in type is Runtime, which causes the plug-in to start when the editor is running, and independent process can not get the port when editor is running. Please use the editor mode to run the game, or directly package and run.
+3. The UI tree cannot be obtained when the UE4 packaged `windows version` game is running.
+
+    To run the game, you need to close the UE4 editor first.
