@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
+using TMPro;
 
 
 namespace Poco
@@ -26,6 +27,8 @@ namespace Poco
             { "Selectable", "Selectable" },
             { "Camera", "Camera" },
             { "RectTransform", "Node" },
+            { "TextMeshProUGUI","TMPROUGUI" },
+            { "TMP_Text","TMPRO" },
         };
         public static string DefaultTypeName = "GameObject";
         private GameObject gameObject;
@@ -212,6 +215,16 @@ namespace Poco
 
         private string GameObjectText()
         {
+            TMP_Text tmpText = gameObject.GetComponent<TMP_Text>();
+            if (tmpText)
+            {
+                return tmpText.GetParsedText();
+            }
+            TextMeshProUGUI tmpUIText = gameObject.GetComponent<TextMeshProUGUI>();
+            if (tmpUIText)
+            {
+                return tmpUIText.GetParsedText();
+            }
             Text text = gameObject.GetComponent<Text>();
             return text ? text.text : null;
         }
@@ -332,12 +345,18 @@ namespace Poco
             // 如果unity版本小于unity5.5，就用递归的方式取吧，没法直接取rootCanvas
             // 如果有用到4.6以下版本的话就自己手动在这里添加条件吧
 #if UNITY_4_6 || UNITY_4_7 || UNITY_4_8 || UNITY_4_9 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2 || UNITY_5_3 || UNITY_5_4
-			if (canvas && canvas.isRootCanvas) {
+			if (canvas && canvas.isRootCanvas)
+			{
 				return canvas;
-			} else {
-				if (gameObject.transform.parent.gameObject != null) {
+			}
+			else
+			{
+				if (gameObject.transform.parent.gameObject != null)
+				{
 					return GetRootCanvas(gameObject.transform.parent.gameObject);
-				} else {
+				}
+				else
+				{
 					return null;
 				}
 			}
