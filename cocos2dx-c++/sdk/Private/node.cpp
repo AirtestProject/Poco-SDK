@@ -1,6 +1,11 @@
 #include<iostream>
 #include<regex>
 #include "sdk/Public/node.h"
+#include <cocos/ui/UIButton.h>
+#include <cocos/ui/UITextField.h>
+#include <cocos/ui/UIScale9Sprite.h>
+#include <cocos/ui/UISlider.h>
+using namespace ui;
 using namespace cocos2d;
 using namespace rapidjson;
 
@@ -59,8 +64,12 @@ void NeteaseNode::getSize(float* data)
 	}
 	size.width = size.width / _screenSize.width;
 	size.height = size.height / _screenSize.height;
-	data[0] = size.width;
-	data[1] = size.height;
+	//data[0] = size.width;
+	//data[1] = size.height;
+
+	auto glView = Director::getInstance()->getOpenGLView();
+	data[0] = size.width * glView->getScaleX();
+	data[1] = size.height * glView->getScaleY();
 }
 
 void NeteaseNode::getScale(float* data)
@@ -152,7 +161,6 @@ void NeteaseNode::getChildren(Writer<StringBuffer>& writer){
 		writer.StartArray();
 
 #if COCOS2D_VERSION >= 0x00020100 && COCOS2D_VERSION < 0x00030000
-		CCLOG("into 1");
 		CCObject* child;
 		CCARRAY_FOREACH(_node->getChildren(), child)
 		{
@@ -167,11 +175,9 @@ void NeteaseNode::getChildren(Writer<StringBuffer>& writer){
 			writer.EndObject();
 		}
 #else
-		CCLOG("into 2");
 		Label* label = dynamic_cast<Label*>(_node);
 		for (auto& child : _node->getChildren()) {
 			if (label != NULL) {
-				// 这个应该是游戏里面的sprite对象
 				Sprite* sprite = dynamic_cast<Sprite*>(child);
 				if (sprite != NULL) {
 					//not parse Sprite under Label
@@ -194,11 +200,8 @@ void NeteaseNode::getChildren(Writer<StringBuffer>& writer){
 
 void NeteaseNode::setDumpString(Writer<StringBuffer>& writer)
 {
-	int nodeType = -1;
-	getNodeType(nodeType);
-
+	int nodeType = getNodeType();
 	string nodeName = _node->getName();
-	CCLOG("NAME:%s", nodeName.c_str());
 
 	writer.Key("name");
 	writer.String(nodeName.c_str());
@@ -216,7 +219,7 @@ void NeteaseNode::getPayload(string nodeName, int nodeType, Writer<StringBuffer>
 	writer.StartArray();
 	writer.Int(this->getScreenWidth());
 	writer.Int(this->getScreenHeight());
-	CCLOG("ScreenSize: %d, %d", this->getScreenWidth(), this->getScreenHeight());
+	//CCLOG("ScreenSize: %d, %d", this->getScreenWidth(), this->getScreenHeight());
 	writer.EndArray();
 
 	writer.Key("rotation");
@@ -337,52 +340,114 @@ void NeteaseNode::getPayload(string nodeName, int nodeType, Writer<StringBuffer>
 	writer.EndObject();
 }
 
-void NeteaseNode::getNodeType(int& nodeType)
-{
+int NeteaseNode::getNodeType() {
+	int nodeType = -10;
 	Layer* layer = dynamic_cast<Layer*>(_node);
 	if (layer != nullptr) {
-		nodeType = N_Layer;  //这个地方不太确定
-		return;
+		nodeType = N_Layer;
+		return nodeType;
 	}
 
 	MenuItem* menuItem = dynamic_cast<MenuItem*>(_node);
 	if (menuItem != nullptr) {
 		nodeType = N_MenuItem;
-		return;
+		return nodeType;
 	}
 
 	Scene* scene = dynamic_cast<Scene*>(_node);
 	if (scene != NULL) {
 		nodeType = N_Scene;
-		return;
+		return nodeType;
 	}
 
 	AtlasNode* atlas = dynamic_cast<AtlasNode*>(_node);
 	if (atlas != NULL) {
 		nodeType = N_AtlasNode;
-		return;
+		return nodeType;
 	}
 
 	LabelTTF* ttf = dynamic_cast<LabelTTF*>(_node);
 	if (ttf != NULL) {
 		nodeType = N_LabelTTF;
-		return;
+		return nodeType;
 	}
 
 	SpriteBatchNode* batch = dynamic_cast<SpriteBatchNode*>(_node);
 	if (batch != NULL) {
 		nodeType = N_SpriteBatchNode;
-		return;
+		return nodeType;
 	}
 
 	Sprite* sprite = dynamic_cast<Sprite*>(_node);
 	if (sprite != NULL) {
 		nodeType = N_Sprite;
-		return;
+		return nodeType;
 	}
+
+	Slider* slider = dynamic_cast<Slider*>(_node);
+	if (slider != nullptr) {
+		nodeType = N_Slider;
+		return nodeType;
+	}
+
+	Label* label = dynamic_cast<Label*>(_node);
+	if (label != nullptr) {
+		nodeType = N_Lable;
+		return nodeType;
+	}
+
+	ProgressTimer* processTimer = dynamic_cast<ProgressTimer*>(_node);
+	if (processTimer != nullptr) {
+		nodeType = N_ProgressTimer;
+		return nodeType;
+	}
+
+	TextField* textField = dynamic_cast<TextField*>(_node);
+	if (textField != nullptr) {
+		nodeType = N_TextField;
+		return nodeType;
+	}
+
+	ClippingNode* clippingNode = dynamic_cast<ClippingNode*>(_node);
+	if (clippingNode != nullptr) {
+		nodeType = N_ClippingNode;
+		return nodeType;
+	}
+
+	LayerColor* layerColor = dynamic_cast<LayerColor*>(_node);
+	if (layerColor != nullptr) {
+		nodeType = N_LayerColor;
+		return nodeType;
+	}
+
+	LabelBMFont* layerBMFont = dynamic_cast<LabelBMFont*>(_node);
+	if (layerBMFont != nullptr) {
+		nodeType = N_LableBMFont;
+		return nodeType;
+	}
+
+	Image* image = dynamic_cast<Image*>(_node);
+	if (image != nullptr) {
+		nodeType = N_Image;
+		return nodeType;
+	}
+
+	Scale9Sprite* scale9Sprite = dynamic_cast<Scale9Sprite*>(_node);
+	if (scale9Sprite != nullptr) {
+		nodeType = N_Scale9Sprite;
+		return nodeType;
+	}
+
+	Button* button = dynamic_cast<Button*>(_node);
+	if (button != nullptr) {
+		nodeType = N_Button;
+		return nodeType;
+	}
+
 	nodeType = N_Unknown;
-	return;
+	return nodeType;
 }
+
 string NeteaseNode::getNodeTypeStr(int nodeType) 
 {
 	switch (nodeType) {
@@ -407,13 +472,27 @@ string NeteaseNode::getNodeTypeStr(int nodeType)
 	case 9:
 		return "GuideTouchNode";
 	case 10:
-		return "INode";
+		return "Slider";
+	case 11:
+		return "Label";
+	case 12:
+		return "ProgressTimer";
+	case 13:
+		return "ClippingNode";
+	case 14:
+		return "TextField";
+	case 15:
+		return "LayerColor";
+	case 16:
+		return "LableBMFont";
+	case 17:
+		return "Image";
+	case 18:
+		return "Scale9Sprite";
+	case 19:
+		return "Button";
+
 	default:
 		return "Control";
 	}
-}
-
-void NeteaseNode::doClick(vector<float>& data) noexcept
-{
-	
 }
