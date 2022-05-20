@@ -18,9 +18,20 @@ enum NodeType {
 	N_LabelTTF = 5,
 	N_SpriteBatchNode = 6,
 	N_Sprite = 7,
+
 	N_Guide = 8,
 	N_GuideTouchNode = 9,
-	N_INode = 10
+
+	N_Slider = 10,
+	N_Lable = 11,
+	N_ProgressTimer = 12,
+	N_ClippingNode = 13,
+	N_TextField = 14,
+	N_LayerColor = 15,
+	N_LableBMFont = 16,
+    N_Image = 17,
+	N_Scale9Sprite = 18,
+	N_Button = 19,
 };
 
 
@@ -54,14 +65,12 @@ public:
 
 	void getPayload(string nodeName, int nodeType, Writer<StringBuffer>& writer);
 
-	void getNodeType(int& nodeType);
+	int getNodeType();
 
 	string getNodeTypeStr(int nodeType);
 
 	float getScreenWidth() { return _screenSize.width; }
 
 	float getScreenHeight() { return _screenSize.height; }
-
-	void doClick(vector<float>& data) noexcept;
 
 };
