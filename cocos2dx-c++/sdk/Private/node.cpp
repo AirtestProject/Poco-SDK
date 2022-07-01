@@ -29,7 +29,7 @@ NeteaseNode::~NeteaseNode()
 	}
 	catch (const exception&)
 	{
-		cout<< "release failedly";
+		cout<< "failed";
 	}
 }
 
