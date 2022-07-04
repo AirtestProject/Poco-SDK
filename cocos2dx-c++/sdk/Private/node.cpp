@@ -29,7 +29,7 @@ NeteaseNode::~NeteaseNode()
 	}
 	catch (const exception&)
 	{
-		cout<< "节点释放异常";
+		cout<< "failed";
 	}
 }
 
@@ -149,6 +149,9 @@ string NeteaseNode::getName(const char* nodeType)
 	if (name.compare("") == 0) {
 		name = desc;
 	}
+	if (name.compare("") == 0) {
+		name = "no-name";
+	}
 	return name;
 #endif
 }
@@ -202,7 +205,9 @@ void NeteaseNode::setDumpString(Writer<StringBuffer>& writer)
 {
 	int nodeType = getNodeType();
 	string nodeName = _node->getName();
-
+	if (nodeName == "") {
+		nodeName = "no-name";
+	}
 	writer.Key("name");
 	writer.String(nodeName.c_str());
 
