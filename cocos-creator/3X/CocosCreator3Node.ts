@@ -37,11 +37,21 @@ export default class CCCNode implements AbstractNode {
                     return (component as any).string
                 }
             }
-            return "unknow"
+            return ""
         } else if (attrName === "type") {
-            let ntype: string =
-                this.node.components[this.node.components.length > 1 ? 1 : 0]
-                    .name
+            const componentSize=this.node.components.length
+            let ntype: string =""
+            //一般第一个是UI组件，pass
+            switch (componentSize) {
+                case 0:
+                    return ""
+                case 1:
+                    ntype=this.node.components[0].name
+                    break;
+                default:
+                    ntype=this.node.components[1].name
+                    break;
+            }
             return ntype.replace(/\w+\./, "")
         } else if (attrName === "pos") {
             // 转换成归一化坐标系，原点左上角
