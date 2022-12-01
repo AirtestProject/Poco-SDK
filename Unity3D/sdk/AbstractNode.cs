@@ -7,7 +7,7 @@ namespace Poco
 {
 	public class AbstractNode
 	{
-		private List<string> requiredAttrs = new List<string> {
+		public List<string> requiredAttrs = new List<string> {
 			"name",
 			"type",
 			"visible",
@@ -27,6 +27,8 @@ namespace Poco
 		{
 			return null;
 		}
+		
+		
 
 		public virtual object getAttr (string attrName)
 		{

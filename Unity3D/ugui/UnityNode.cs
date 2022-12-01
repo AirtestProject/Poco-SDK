@@ -1,285 +1,194 @@
 using System;
 using System.Collections.Generic;
+using Game.SDKs.PocoSDK;
 using UnityEngine.UI;
 using UnityEngine;
-using TMPro;
 
 
 namespace Poco
 {
     public class UnityNode : AbstractNode
     {
-        public static Dictionary<string, string> TypeNames = new Dictionary<string, string>() {
-            { "Text", "Text" },
-            { "Gradient Text", "Gradient.Text" },
-            { "Image", "Image" },
-            { "RawImage", "Raw.Image" },
-            { "Mask", "Mask" },
-            { "2DRectMask", "2D-Rect.Mask" },
-            { "Button", "Button" },
-            { "InputField", "InputField" },
-            { "Toggle", "Toggle" },
-            { "Toggle Group", "ToggleGroup" },
-            { "Slider", "Slider" },
-            { "ScrollBar", "ScrollBar" },
-            { "DropDown", "DropDown" },
-            { "ScrollRect", "ScrollRect" },
-            { "Selectable", "Selectable" },
-            { "Camera", "Camera" },
-            { "RectTransform", "Node" },
-            { "TextMeshProUGUI","TMPROUGUI" },
-            { "TMP_Text","TMPRO" },
-        };
         public static string DefaultTypeName = "GameObject";
-        private GameObject gameObject;
-        private Renderer renderer;
-        private RectTransform rectTransform;
+       
+        public NodeParams paramInfo;
+        //public GameObject gameObject;
+        //private Renderer renderer;
+        //private RectTransform rectTransform;
+        
+        public List<Transform> children = new List<Transform>();
+        public Dictionary<string, System.Object> payLoad = new Dictionary<string, object>();
         private Rect rect;
         private Vector2 objectPos;
-        private List<string> components;
         private Camera camera;
+        private static Camera MainCamera;
 
+        private static Camera[] otherCameras;
 
-        public UnityNode(GameObject obj)
+        public UnityNode()
         {
-            gameObject = obj;
-            camera = Camera.main;
-            foreach (var cam in Camera.allCameras)
+            
+        }
+
+        /// <summary>
+        /// 帧初始化时调用, 记录当前帧的摄像机
+        /// </summary>
+        public static void FrameInit()
+        {
+            MainCamera = Camera.main;
+            otherCameras = Camera.allCameras;
+        }
+
+        /// <summary>
+        /// 每个物体调用, 计算当前照射物体的摄像机
+        /// </summary>
+        public void Added_SetCamera()
+        { 
+            int len = otherCameras.Length;
+            for ( int i = 0; i < len; i++ )
             {
                 // skip the main camera
                 // we want to use specified camera first then fallback to main camera if no other cameras
                 // for further advanced cases, we could test whether the game object is visible within the camera
-                if (cam == Camera.main)
+                /*
+                if ( otherCameras[i] == MainCamera )
                 {
                     continue;
-                }
-                if ((cam.cullingMask & (1 << gameObject.layer)) != 0)
+                }*/
+                if ( ( otherCameras[i].cullingMask &  paramInfo.layer ) != 0 )
                 {
-                    camera = cam;
+                    camera = otherCameras[i];
                 }
             }
-
-            renderer = gameObject.GetComponent<Renderer>();
-            rectTransform = gameObject.GetComponent<RectTransform>();
-            rect = GameObjectRect(renderer, rectTransform);
-            objectPos = renderer ? WorldToGUIPoint(camera, renderer.bounds.center) : Vector2.zero;
-            components = GameObjectAllComponents();
         }
 
-        public override AbstractNode getParent()
+        /// <summary>
+        /// 计算区域
+        /// </summary>
+        /// <param name="param"></param>
+        public void Added_CalculateData(NodeParams param)
         {
-            GameObject parentObj = gameObject.transform.parent.gameObject;
-            return new UnityNode(parentObj);
+            rect = GameObjectRect( param.collider, param.rectTransform);
+            objectPos = param.collider ? WorldToGUIPoint(camera, param.collider.bounds.center) : Vector2.zero;
         }
 
-        public override List<AbstractNode> getChildren()
+        public T GetCustomComponent<T>(int index) where T : Component
         {
-            List<AbstractNode> children = new List<AbstractNode>();
-            foreach (Transform child in gameObject.transform)
+            var components = paramInfo.customComponents;
+            if (index >= components.Count || index < 0)
             {
-                children.Add(new UnityNode(child.gameObject));
+                return null;
             }
-            return children;
+
+            return components[index] as T;
         }
+        
+        private List<string> components = new List<string>();
 
-        public override object getAttr(string attrName)
+        /// <summary>
+        /// 记录各种属性以及相应的查询方法
+        /// 需要注意 该方法分配的内存需要做到线程安全 因为Dump是在主线程 而序列化是在子线程 因此不能为同一片区域
+        /// 之后如果为了降低开发复杂度 可以不允许Dump和序列化并行 变为Dump为Dump 序列化为序列化
+        /// </summary>
+        public static List<(string PropName, Func<UnityNode, object> GetPropFunc) > GetPlayload = new List<(string, Func<UnityNode, object>) >()
         {
-            switch (attrName)
-            {
-                case "name":
-                    return gameObject.name;
-                case "type":
-                    return GuessObjectTypeFromComponentNames(components);
-                case "visible":
-                    return GameObjectVisible(renderer, components);
-                case "pos":
-                    return GameObjectPosInScreen(objectPos, renderer, rectTransform, rect);
-                case "size":
-                    return GameObjectSizeInScreen(rect, rectTransform);
-                case "scale":
-                    return new List<float>() { 1.0f, 1.0f };
-                case "anchorPoint":
-                    return GameObjectAnchorInScreen(renderer, rect, objectPos);
-                case "zOrders":
-                    return GameObjectzOrders();
-                case "clickable":
-                    return GameObjectClickable(components);
-                case "text":
-                    return GameObjectText();
-                case "components":
-                    return components;
-                case "texture":
-                    return GetImageSourceTexture();
-                case "tag":
-                    return GameObjectTag();
-                case "layer":
-                    return GameObjectLayerName();
-                case "_ilayer":
-                    return GameObjectLayer();
-                case "_instanceId":
-                    return gameObject.GetInstanceID();
-                default:
-                    return null;
-            }
-        }
+            ( "name", (node)=> node.paramInfo.name ),
+            ( "type",  (node)=>node.paramInfo.type),  
+           // { "type",  (node)=>node.GuessObjectTypeFromComponentNames (node.paramInfo.components) },    //应无必要判断
+            ( "visible", (node)=>true ),            //应都可见
+            ( "pos", (node)=>node.GameObjectPosInScreen (node.objectPos, node.paramInfo.collider, node.paramInfo.rectTransform, node.rect) ),
+            ( "size", (node)=>node.GameObjectSizeInScreen (node.rect, node.paramInfo.rectTransform) ), 
+           // { "scale", new List<float> (){ 1.0f, 1.0f } },        //默认值, 则无意义
+            ( "anchorPoint", (node)=>node.GameObjectAnchorInScreen (node.paramInfo.collider, node.rect, node.objectPos) ),
+            ( "zOrders", (node)=>node.GameObjectzOrders () ),
+            ( "clickable", (node)=>node.GameObjectClickable (node.components) ),
+            ( "text", (node)=>node.GameObjectText () ),
+            ( "components", (node)=>node.components ),
+            ( "texture", (node)=>node.GetImageSourceTexture () ),
+           // { "tag", (node)=>node.GameObjectTag () },        //应不会判断
+            ( "_ilayer", (node)=>node.GameObjectLayer() ),
+           // { "layer", (node)=>node.GameObjectLayerName() },    //可以由上一个获取
+           // { "_instanceId", (node)=>node.gameObject.GetInstanceID () }    //应不会判断
+        };
 
-
-        public override Dictionary<string, object> enumerateAttrs()
+        /// <summary>
+        /// 填充Payload
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="dict"></param>
+        public void FillPayload( NodeParams param, Dictionary<string, object> dict)
         {
-            Dictionary<string, object> payload = GetPayload();
-            Dictionary<string, object> ret = new Dictionary<string, object>();
-            foreach (KeyValuePair<string, object> p in payload)
+            paramInfo = param;
+            Added_SetCamera();
+            Added_CalculateData(param);
+            
+            //填充属性
+            foreach (var pair in GetPlayload)
             {
-                if (p.Value != null)
-                {
-                    ret.Add(p.Key, p.Value);
-                }
-            }
-            return ret;
-        }
-
-
-        private Dictionary<string, object> GetPayload()
-        {
-            Dictionary<string, object> payload = new Dictionary<string, object>() {
-                { "name", gameObject.name },
-                { "type", GuessObjectTypeFromComponentNames (components) },
-                { "visible", GameObjectVisible (renderer, components) },
-                { "pos", GameObjectPosInScreen (objectPos, renderer, rectTransform, rect) },
-                { "size", GameObjectSizeInScreen (rect, rectTransform) },
-                { "scale", new List<float> (){ 1.0f, 1.0f } },
-                { "anchorPoint", GameObjectAnchorInScreen (renderer, rect, objectPos) },
-                { "zOrders", GameObjectzOrders () },
-                { "clickable", GameObjectClickable (components) },
-                { "text", GameObjectText () },
-                { "components", components },
-                { "texture", GetImageSourceTexture () },
-                { "tag", GameObjectTag () },
-                { "_ilayer", GameObjectLayer() },
-                { "layer", GameObjectLayerName() },
-                { "_instanceId", gameObject.GetInstanceID () },
-            };
-            return payload;
-        }
-
-        private string GuessObjectTypeFromComponentNames(List<string> components)
-        {
-            List<string> cns = new List<string>(components);
-            cns.Reverse();
-            foreach (string name in cns)
-            {
-                if (TypeNames.ContainsKey(name))
-                {
-                    return TypeNames[name];
-                }
-            }
-            return DefaultTypeName;
-        }
-
-        private bool GameObjectVisible(Renderer renderer, List<string> components)
-        {
-            if (gameObject.activeInHierarchy)
-            {
-                bool light = components.Contains("Light");
-                // bool mesh = components.Contains ("MeshRenderer") && components.Contains ("MeshFilter");
-                bool particle = components.Contains("ParticleSystem") && components.Contains("ParticleSystemRenderer");
-                if (light || particle)
-                {
-                    return false;
-                }
-                else
-                {
-                    return renderer ? renderer.isVisible : true;
-                }
-            }
-            else
-            {
-                return false;
+                dict[pair.PropName] = pair.GetPropFunc(this);
             }
         }
 
+        /// <summary>
+        /// 获取layer
+        /// </summary>
+        /// <returns></returns>
         private int GameObjectLayer()
         {
-            return gameObject.layer;
-        }
-        private string GameObjectLayerName()
-        {
-            return LayerMask.LayerToName(gameObject.layer);
+            return paramInfo.layer;
         }
 
+        /// <summary>
+        /// 获取Clickable
+        /// </summary>
+        /// <param name="components"></param>
+        /// <returns></returns>
         private bool GameObjectClickable(List<string> components)
         {
-            Button button = gameObject.GetComponent<Button>();
+            Button button = paramInfo.button;
             return button ? button.isActiveAndEnabled : false;
         }
 
+        /// <summary>
+        /// 获取Text
+        /// </summary>
+        /// <returns></returns>
         private string GameObjectText()
         {
-            TMP_Text tmpText = gameObject.GetComponent<TMP_Text>();
-            if (tmpText)
-            {
-                return tmpText.GetParsedText();
-            }
-            TextMeshProUGUI tmpUIText = gameObject.GetComponent<TextMeshProUGUI>();
-            if (tmpUIText)
-            {
-                return tmpUIText.GetParsedText();
-            }
-            Text text = gameObject.GetComponent<Text>();
+            Text text = paramInfo.text;
             return text ? text.text : null;
         }
 
-        private string GameObjectTag()
-        {
-            string tag;
-            try
-            {
-                tag = !gameObject.CompareTag("Untagged") ? gameObject.tag : null;
-            }
-            catch (UnityException)
-            {
-                tag = null;
-            }
-            return tag;
-        }
-
-        private List<string> GameObjectAllComponents()
-        {
-            List<string> components = new List<string>();
-            Component[] allComponents = gameObject.GetComponents<Component>();
-            if (allComponents != null)
-            {
-                foreach (Component ac in allComponents)
-                {
-                    if (ac != null)
-                    {
-                        components.Add(ac.GetType().Name);
-                    }
-                }
-            }
-            return components;
-        }
-
+        /// <summary>
+        /// 获取Z顺序
+        /// </summary>
         private Dictionary<string, float> GameObjectzOrders()
         {
+            Dictionary<string, float> zOrders = new Dictionary<string, float>();
             float CameraViewportPoint = 0;
             if (camera != null)
             {
-                CameraViewportPoint = Math.Abs(camera.WorldToViewportPoint(gameObject.transform.position).z);
+                CameraViewportPoint = Math.Abs(camera.WorldToViewportPoint(paramInfo.transform.position).z);
             }
-            Dictionary<string, float> zOrders = new Dictionary<string, float>() {
-                { "global", 0f },
-                { "local", -1 * CameraViewportPoint }
-            };
+
+            zOrders["global"] = 0f;
+            zOrders["local"] = -1 * CameraViewportPoint;
+            
             return zOrders;
         }
 
-        private Rect GameObjectRect(Renderer renderer, RectTransform rectTransform)
+        /// <summary>
+        /// 获取区域
+        /// </summary>
+        /// <param name="collider"></param>
+        /// <param name="rectTransform"></param>
+        /// <returns></returns>
+        private Rect GameObjectRect(Collider collider, RectTransform rectTransform)
         {
             Rect rect = new Rect(0, 0, 0, 0);
-            if (renderer)
+            if (collider)
             {
-                rect = RendererToScreenSpace(camera, renderer);
+                rect = RendererToScreenSpace(camera, collider);
             }
             else if (rectTransform)
             {
@@ -288,11 +197,19 @@ namespace Poco
             return rect;
         }
 
-        private float[] GameObjectPosInScreen(Vector3 objectPos, Renderer renderer, RectTransform rectTransform, Rect rect)
+        /// <summary>
+        /// 获取Pos
+        /// </summary>
+        /// <param name="objectPos"></param>
+        /// <param name="collider"></param>
+        /// <param name="rectTransform"></param>
+        /// <param name="rect"></param>
+        /// <returns></returns>
+        private float[] GameObjectPosInScreen(Vector3 objectPos, Collider collider, RectTransform rectTransform, Rect rect)
         {
             float[] pos = { 0f, 0f };
 
-            if (renderer)
+            if (collider)
             {
                 // 3d object
                 pos[0] = objectPos.x / (float)Screen.width;
@@ -302,7 +219,7 @@ namespace Poco
             {
                 // ui object (rendered on screen space, other render modes may be different)
                 // use center pos for now
-                Canvas rootCanvas = GetRootCanvas(gameObject);
+                Canvas rootCanvas = GetRootCanvas( paramInfo.gameObject);
                 RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode();
                 switch (renderMode)
                 {
@@ -318,10 +235,14 @@ namespace Poco
                         //注意: 这里的position其实是Pivot点在Screen上的坐标，并不是图形意义上的中心点,在经过下列玄学公式换算才是真的图形中心在屏幕的位置。
                         //公式内算上了rootCanvas.scaleFactor 缩放因子，经测试至少在Canvas Scaler.Expand模式下，什么分辨率和屏幕比都抓的很准，兼容性很强，其他的有待测试。
                         //由于得出来的坐标是左下角为原点，触控输入是左上角为原点，所以要上下反转一下Poco才能用,所以y坐标用Screen.height减去。
-                        position.Set(
-                            position.x - rectTransform.rect.width * rootCanvas.scaleFactor * (rectTransform.pivot.x - 0.5f),
-                            Screen.height - (position.y - rectTransform.rect.height * rootCanvas.scaleFactor * (rectTransform.pivot.y - 0.5f))
-                            );
+                        
+                        //2021/4/21 LBS修改 由于编辑器里会根据pivot进行中心点位置计算, 原poco代码在C#部分又做了一遍, 反而导致对不上, 因此, 只在此处做y坐标变换
+                        // position.Set(
+                        //     position.x - rectTransform.rect.width * rootCanvas.scaleFactor * (rectTransform.pivot.x - 0.5f),
+                        //     Screen.height - (position.y - rectTransform.rect.height * rootCanvas.scaleFactor * (rectTransform.pivot.y - 0.5f))
+                        //     );
+                        position.y = Screen.height - position.y;
+                        
                         pos[0] = position.x / Screen.width;
                         pos[1] = position.y / Screen.height;
                         break;
@@ -339,24 +260,24 @@ namespace Poco
             return pos;
         }
 
+        /// <summary>
+        /// 获取RootCanvas
+        /// </summary>
+        /// <param name="gameObject"></param>
+        /// <returns></returns>
         private Canvas GetRootCanvas(GameObject gameObject)
         {
+            return paramInfo.rootCanvas;
             Canvas canvas = gameObject.GetComponentInParent<Canvas>();
             // 如果unity版本小于unity5.5，就用递归的方式取吧，没法直接取rootCanvas
             // 如果有用到4.6以下版本的话就自己手动在这里添加条件吧
 #if UNITY_4_6 || UNITY_4_7 || UNITY_4_8 || UNITY_4_9 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2 || UNITY_5_3 || UNITY_5_4
-			if (canvas && canvas.isRootCanvas)
-			{
+			if (canvas && canvas.isRootCanvas) {
 				return canvas;
-			}
-			else
-			{
-				if (gameObject.transform.parent.gameObject != null)
-				{
+			} else {
+				if (gameObject.transform.parent.gameObject != null) {
 					return GetRootCanvas(gameObject.transform.parent.gameObject);
-				}
-				else
-				{
+				} else {
 					return null;
 				}
 			}
@@ -375,51 +296,67 @@ namespace Poco
             }
 #endif
         }
-
+        
+        
+        /// <summary>
+        /// 计算Size
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="rectTransform"></param>
+        /// <returns></returns>
         private float[] GameObjectSizeInScreen(Rect rect, RectTransform rectTransform)
         {
-            float[] size = { 0f, 0f };
+            float[] size = {0f, 1f};
+            
             if (rectTransform)
             {
-                Canvas rootCanvas = GetRootCanvas(gameObject);
+                Canvas rootCanvas = GetRootCanvas(paramInfo.gameObject);
                 RenderMode renderMode = rootCanvas != null ? rootCanvas.renderMode : new RenderMode();
                 switch (renderMode)
                 {
                     case RenderMode.ScreenSpaceCamera:
                         Rect _rect = RectTransformUtility.PixelAdjustRect(rectTransform, rootCanvas);
-                        size = new float[] {
-                            _rect.width * rootCanvas.scaleFactor / (float)Screen.width,
-                            _rect.height * rootCanvas.scaleFactor / (float)Screen.height
-                        };
+                        size[0] = _rect.width * rootCanvas.scaleFactor / (float) Screen.width;
+                        size[1] = _rect.height * rootCanvas.scaleFactor / (float) Screen.height;
                         break;
                     case RenderMode.WorldSpace:
                         Rect rect_ = rectTransform.rect;
-                        RectTransform canvasTransform = rootCanvas.GetComponent<RectTransform>();
-                        size = new float[] { rect_.width / canvasTransform.rect.width, rect_.height / canvasTransform.rect.height };
+                        RectTransform canvasTransform = paramInfo.rootCanvasRectTransform;
+                        size[0] = rect_.width / canvasTransform.rect.width;
+                        size[1] = rect_.height / canvasTransform.rect.height;
                         break;
                     default:
-                        size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+                        size[0] = rect.width / (float) Screen.width;
+                        size[1] = rect.height / (float)Screen.height;
                         break;
                 }
             }
             else
             {
-                size = new float[] { rect.width / (float)Screen.width, rect.height / (float)Screen.height };
+                size[0] = rect.width / (float) Screen.width;
+                size[1] = rect.height / (float)Screen.height;
             }
             return size;
         }
 
-        private float[] GameObjectAnchorInScreen(Renderer renderer, Rect rect, Vector3 objectPos)
+        /// <summary>
+        /// 计算Anchor
+        /// </summary>
+        /// <param name="collider"></param>
+        /// <param name="rect"></param>
+        /// <param name="objectPos"></param>
+        /// <returns></returns>
+        private float[] GameObjectAnchorInScreen(Collider collider, Rect rect, Vector3 objectPos)
         {
             float[] defaultValue = { 0.5f, 0.5f };
-            if (rectTransform)
+            if ( paramInfo.rectTransform)
             {
-                Vector2 data = rectTransform.pivot;
+                Vector2 data = paramInfo.rectTransform.pivot;
                 defaultValue[0] = data[0];
                 defaultValue[1] = 1 - data[1];
                 return defaultValue;
             }
-            if (!renderer)
+            if (!collider)
             {
                 //<Modified> some object do not have renderer
                 return defaultValue;
@@ -443,35 +380,46 @@ namespace Poco
             }
         }
 
+        /// <summary>
+        /// 计算Image
+        /// </summary>
+        /// <returns></returns>
         private string GetImageSourceTexture()
         {
-            Image image = gameObject.GetComponent<Image>();
+            Image image = paramInfo.image;
             if (image != null && image.sprite != null)
             {
                 return image.sprite.name;
             }
 
-            RawImage rawImage = gameObject.GetComponent<RawImage>();
+            RawImage rawImage = paramInfo.rawImage;
             if (rawImage != null && rawImage.texture != null)
             {
                 return rawImage.texture.name;
             }
 
-            SpriteRenderer spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
-            if (spriteRenderer != null && spriteRenderer.sprite != null)
+            SpriteRenderer spriteRenderer = paramInfo.spriteRenderer;
+            if (spriteRenderer != null) 
             {
-                return spriteRenderer.sprite.name;
+                var spr = spriteRenderer.sprite;
+                return spr == null? null : spr.name;
             }
 
-            Renderer render = gameObject.GetComponent<Renderer>();
-            if (renderer != null && renderer.material != null)
-            {
-                return renderer.material.color.ToString();
-            }
+            // Renderer render = gameObject.GetComponent<Renderer>();
+            // if (collider != null && collider.material != null && render.material.HasProperty("_Color"))
+            // {
+            //     return collider.material.color.ToString();
+            // }
 
             return null;
         }
 
+        /// <summary>
+        /// 计算坐标
+        /// </summary>
+        /// <param name="camera"></param>
+        /// <param name="world"></param>
+        /// <returns></returns>
         protected static Vector2 WorldToGUIPoint(Camera camera, Vector3 world)
         {
             Vector2 screenPoint = Vector2.zero;
@@ -483,10 +431,16 @@ namespace Poco
             return screenPoint;
         }
 
-        protected static Rect RendererToScreenSpace(Camera camera, Renderer renderer)
+        /// <summary>
+        /// 计算大小
+        /// </summary>
+        /// <param name="camera"></param>
+        /// <param name="collider"></param>
+        /// <returns></returns>
+        protected static Rect RendererToScreenSpace(Camera camera, Collider collider)
         {
-            Vector3 cen = renderer.bounds.center;
-            Vector3 ext = renderer.bounds.extents;
+            Vector3 cen = collider.bounds.center;
+            Vector3 ext = collider.bounds.extents;
             Vector2[] extentPoints = new Vector2[8] {
                 WorldToGUIPoint (camera, new Vector3 (cen.x - ext.x, cen.y - ext.y, cen.z - ext.z)),
                 WorldToGUIPoint (camera, new Vector3 (cen.x + ext.x, cen.y - ext.y, cen.z - ext.z)),
@@ -507,6 +461,11 @@ namespace Poco
             return new Rect(min.x, min.y, max.x - min.x, max.y - min.y);
         }
 
+        /// <summary>
+        /// 计算Rect
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <returns></returns>
         protected static Rect RectTransformToScreenSpace(RectTransform rectTransform)
         {
             Vector2 size = Vector2.Scale(rectTransform.rect.size, rectTransform.lossyScale);
@@ -516,6 +475,12 @@ namespace Poco
             return rect;
         }
 
+        /// <summary>
+        /// 设置Text
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="textVal"></param>
+        /// <returns></returns>
         public static bool SetText(GameObject go, string textVal)
         {
             if (go != null)
@@ -529,5 +494,61 @@ namespace Poco
             }
             return false;
         }
+    }
+    
+    public static class TypeNeedField
+    {
+        public static List<string> btnField = new List<string>() 
+        {
+            "name", 
+            "type",
+            "pos",
+            "visible",
+            "size",
+            "scale",
+            "anchorPoint",
+            "zOrders",
+            "text"
+        };
+        
+        public static List<string> textField = new List<string>() 
+        {
+            "name", 
+            "type",
+            "pos",
+            "visible",
+            "size",
+            "scale",
+            "anchorPoint",
+            "zOrders",
+            "text"
+        };
+        
+        public static List<string> colliderField = new List<string>() 
+        {
+            "name", 
+            "type",
+            "pos",
+            "visible",
+            "size",
+            "scale",
+            "anchorPoint",
+            "zOrders",
+            "text"
+        };
+        
+        public static List<string> defaultField = new List<string>() 
+        {
+            "name", 
+            "type",
+            "pos",
+            "visible",
+            "size",
+            "scale",
+            "anchorPoint",
+            "zOrders",
+            "text"
+        };
+        
     }
 }

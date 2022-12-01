@@ -60,17 +60,17 @@ namespace TcpServer
             return ret;
         }
 
-        public byte[] pack(String content)
+        public byte[] pack(byte[] respBytes)
         {
-            int len = content.Length;
+            int len = respBytes.Length;
             byte[] size = BitConverter.GetBytes(len);
             if (!BitConverter.IsLittleEndian)
             {
                 //reverse it so we get little endian.
                 Array.Reverse(size);
             }
-            byte[] body = System.Text.Encoding.Default.GetBytes(content);
-            byte[] ret = Combine(size, body);
+            
+            byte[] ret = Combine(size, respBytes);
             return ret;
         }
 
@@ -176,7 +176,7 @@ namespace TcpServer
         /// <returns>异步TCP服务器</returns>
         public AsyncTcpServer Start()
         {
-            Debug.Log("start server");
+            Debug.LogError("start poco server");
             return Start(10);
         }
 
@@ -411,6 +411,8 @@ namespace TcpServer
                 throw new InvalidProgramException("This TCP server has not been started yet.");
         }
 
+        private object sendLock = new object();
+        
         /// <summary>
         /// 发送报文至指定的客户端
         /// </summary>
@@ -418,26 +420,30 @@ namespace TcpServer
         /// <param name="datagram">报文</param>
         public void Send(TcpClient tcpClient, byte[] datagram)
         {
-            GuardRunning();
-
-            if (tcpClient == null)
-                throw new ArgumentNullException("tcpClient");
-
-            if (datagram == null)
-                throw new ArgumentNullException("datagram");
-
-            try
+            lock (sendLock)
             {
-                NetworkStream stream = tcpClient.GetStream();
-                if (stream.CanWrite)
+                GuardRunning();
+
+                if (tcpClient == null)
+                    throw new ArgumentNullException("tcpClient");
+
+                if (datagram == null)
+                    throw new ArgumentNullException("datagram");
+
+                try
                 {
-                    stream.BeginWrite(datagram, 0, datagram.Length, HandleDatagramWritten, tcpClient);
+                    NetworkStream stream = tcpClient.GetStream();
+                    if (stream.CanWrite)
+                    {
+                        stream.BeginWrite(datagram, 0, datagram.Length, HandleDatagramWritten, tcpClient);
+                    }
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    Debug.LogException(ex);
                 }
             }
-            catch (ObjectDisposedException ex)
-            {
-                Debug.LogException(ex);
-            }
+            
         }
 
         /// <summary>
