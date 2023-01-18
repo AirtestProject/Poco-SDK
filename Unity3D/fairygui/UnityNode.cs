@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using FairyGUI;
 
-namespace Poco
+namespace Poco.FairyGUI
 {
     public class UnityNode : AbstractNode
     {
