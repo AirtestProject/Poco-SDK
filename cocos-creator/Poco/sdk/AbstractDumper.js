@@ -31,8 +31,7 @@ AbstractDumper.prototype.dumpHierarchyImpl = function (node, onlyVisibleNode) {
     var result = {}
     var children = []
     var nodeChildren = node.getChildren()
-    for (var i in nodeChildren) {
-        var child = nodeChildren[i]
+    for (var child of nodeChildren) {
         if (!onlyVisibleNode || (payload['visible'] || child.getAttr('visible'))) {
             children.push(this.dumpHierarchyImpl(child, onlyVisibleNode))
         }
