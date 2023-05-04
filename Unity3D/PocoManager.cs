@@ -12,6 +12,8 @@ using TcpServer;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
+#pragma warning disable CS0414
+
 [AddComponentMenu("AirTest/PocoManager")]
 public class PocoManager : MonoBehaviour
 {
