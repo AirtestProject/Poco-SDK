@@ -12,6 +12,7 @@ using TcpServer;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
+[AddComponentMenu("AirTest/PocoManager")]
 public class PocoManager : MonoBehaviour
 {
     public const int versionCode = 6;
