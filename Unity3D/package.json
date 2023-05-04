@@ -1,0 +1,12 @@
+{
+  "name": "com.airtest.poco-sdk",
+  "description": "Unity integration for Poco-SDK.",
+  "displayName": "Poco SDK",
+  "version": "1.0.0",
+  "unity": "2021.3",
+  "author": "AirTest",
+  "type": "airtest.package",
+  "dependencies": {
+    "org.nuget.newtonsoft.json": "13.0.1"
+  }
+}
