@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+#if PACKAGE_FAIRYGUI
 using FairyGUI;
+#endif
 
-namespace Poco
+namespace Poco.fairygui
 {
+#if PACKAGE_FAIRYGUI
     public class UnityNode : AbstractNode
     {
         public static string DefaultTypeName = "GameObject";
@@ -245,4 +248,5 @@ namespace Poco
             return false;
         }
     }
+#endif
 }

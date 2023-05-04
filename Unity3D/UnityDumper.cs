@@ -23,12 +23,20 @@ namespace Poco
             {
                 if (obj.transform.parent == null)
                 {
-                    children.Add(new UnityNode(obj));
+                    #if PACKAGE_NGUI
+                    children.Add(new ngui.UnityNode(obj));
+                    #elif PACKAGE_FAIRYGUI
+                    children.Add(new fairygui.UnityNode(obj));
+                    #elif PACKAGE_TMPRO
+                    children.Add(new uguiWithTMPro.UnityNode(obj));
+                    #else
+                    children.Add(new ugui.UnityNode(obj));
+                    #endif
                 }
             }
         }
 
-        public override List<AbstractNode> getChildren() //<Modified> 
+        public override List<AbstractNode> getChildren() //<Modified>
         {
             return children;
         }

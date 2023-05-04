@@ -4,8 +4,9 @@ using UnityEngine.UI;
 using UnityEngine;
 
 
-namespace Poco
+namespace Poco.ngui
 {
+#if PACKAGE_NGUI
     public class UnityNode : AbstractNode
     {
         public static Dictionary<string, string> TypeNames = new Dictionary<string, string>() {
@@ -338,4 +339,5 @@ namespace Poco
             return false;
         }
     }
+#endif
 }

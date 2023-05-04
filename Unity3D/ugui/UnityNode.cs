@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine.UI;
 using UnityEngine;
+using UnityEngine.UI;
+#if PACKAGE_TMPRO
 using TMPro;
+#endif
 
-
-namespace Poco
+namespace Poco.ugui
 {
     public class UnityNode : AbstractNode
     {
@@ -27,8 +28,10 @@ namespace Poco
             { "Selectable", "Selectable" },
             { "Camera", "Camera" },
             { "RectTransform", "Node" },
+#if PACKAGE_TMPRO
             { "TextMeshProUGUI","TMPROUGUI" },
             { "TMP_Text","TMPRO" },
+#endif
         };
         public static string DefaultTypeName = "GameObject";
         private GameObject gameObject;
@@ -38,7 +41,9 @@ namespace Poco
         private Vector2 objectPos;
         private List<string> components;
         private Camera camera;
-
+#if UNITY_2021_1_OR_NEWER
+        private UnityEngine.UIElements.UIDocument uiDocument;
+#endif
 
         public UnityNode(GameObject obj)
         {
@@ -64,6 +69,9 @@ namespace Poco
             rect = GameObjectRect(renderer, rectTransform);
             objectPos = renderer ? WorldToGUIPoint(camera, renderer.bounds.center) : Vector2.zero;
             components = GameObjectAllComponents();
+#if UNITY_2021_1_OR_NEWER
+            uiDocument = gameObject.GetComponent<UnityEngine.UIElements.UIDocument>();
+#endif
         }
 
         public override AbstractNode getParent()
@@ -79,6 +87,13 @@ namespace Poco
             {
                 children.Add(new UnityNode(child.gameObject));
             }
+
+#if UNITY_2021_1_OR_NEWER
+            if (uiDocument && uiDocument.rootVisualElement is not null)
+            {
+                children.Add(new UnityVisualElement(uiDocument.rootVisualElement));
+            }
+#endif
             return children;
         }
 
@@ -215,6 +230,7 @@ namespace Poco
 
         private string GameObjectText()
         {
+#if PACKAGE_TMPRO
             TMP_Text tmpText = gameObject.GetComponent<TMP_Text>();
             if (tmpText)
             {
@@ -225,6 +241,7 @@ namespace Poco
             {
                 return tmpUIText.GetParsedText();
             }
+#endif
             Text text = gameObject.GetComponent<Text>();
             return text ? text.text : null;
         }

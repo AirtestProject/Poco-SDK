@@ -171,9 +171,30 @@ public class PocoManager : MonoBehaviour
         {
             if (go.GetInstanceID() == instanceId)
             {
-                return UnityNode.SetText(go, textVal);
+#if PACKAGE_NGUI
+                return Poco.ngui.UnityNode.SetText(go, textVal);
+#elif PACKAGE_FAIRYGUI
+                return Poco.fairygui.UnityNode.SetText(go, textVal);
+#elif PACKAGE_TMPRO
+                return Poco.uguiWithTMPro.UnityNode.SetText(go, textVal);
+#else
+                return Poco.ugui.UnityNode.SetText(go, textVal);
+#endif
             }
         }
+
+#if PACKAGE_NGUI
+#elif PACKAGE_FAIRYGUI
+#elif PACKAGE_TMPRO
+#else
+#if UNITY_2021_1_OR_NEWER
+        foreach ((Poco.ugui.UnityVisualElement element, int instanceID) in Poco.ugui.UnityVisualElement.instanceIDs)
+        {
+            if (instanceID == instanceId) return Poco.ugui.UnityVisualElement.SetText(element, textVal);
+        }
+#endif
+#endif
+
         return false;
     }
 

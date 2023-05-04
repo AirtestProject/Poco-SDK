@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
+#if PACKAGE_TMPRO
 using TMPro;
+#endif
 
-
-namespace Poco
+namespace Poco.uguiWithTMPro
 {
     public class UnityNode : AbstractNode
     {
@@ -27,9 +28,11 @@ namespace Poco
             { "Selectable", "Selectable" },
             { "Camera", "Camera" },
             { "RectTransform", "Node" },
+#if PACKAGE_TMPRO
             { "TextMeshProUGUI","TMPROUGUI" },
             { "TMP_Text","TMPRO" },
-            };
+#endif
+        };
         public static string DefaultTypeName = "GameObject";
         private GameObject gameObject;
         private Renderer renderer;
@@ -212,9 +215,10 @@ namespace Poco
             Button button = gameObject.GetComponent<Button>();
             return button ? button.isActiveAndEnabled : false;
         }
-        
+
         private string GameObjectText()
         {
+#if PACKAGE_TMPRO
             TMP_Text tmpText = gameObject.GetComponent<TMP_Text>();
             if (tmpText)
             {
@@ -225,6 +229,7 @@ namespace Poco
             {
                 return tmpUIText.GetParsedText();
             }
+#endif
             Text text = gameObject.GetComponent<Text>();
             return text ? text.text : null;
 		}
@@ -345,17 +350,17 @@ namespace Poco
             // 如果unity版本小于unity5.5，就用递归的方式取吧，没法直接取rootCanvas
             // 如果有用到4.6以下版本的话就自己手动在这里添加条件吧
 #if UNITY_4_6 || UNITY_4_7 || UNITY_4_8 || UNITY_4_9 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2 || UNITY_5_3 || UNITY_5_4
-            if (canvas && canvas.isRootCanvas) 
+            if (canvas && canvas.isRootCanvas)
             {
                 return canvas;
-            } 
-            else 
+            }
+            else
             {
                 if (gameObject.transform.parent.gameObject != null)
                 {
                     return GetRootCanvas(gameObject.transform.parent.gameObject);
-                } 
-                else 
+                }
+                else
                 {
                     return null;
                 }
