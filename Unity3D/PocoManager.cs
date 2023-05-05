@@ -38,10 +38,8 @@ public class PocoManager : MonoBehaviour
     {
     }
 
-    void Awake()
+    void OnEnable()
     {
-        Application.runInBackground = true;
-        DontDestroyOnLoad(this);
         prot = new SimpleProtocolFilter();
         rpc = new RPCParser();
         rpc.addRpcMethod("isVRSupported", vr_support.isVRSupported);
@@ -89,6 +87,10 @@ public class PocoManager : MonoBehaviour
             Debug.LogError(string.Format("Unable to find an unused port from {0} to {1}", port, port + 5));
         }
         vr_support.ClearCommands();
+    }
+    void OnDisable()
+    {
+        stopListening();
     }
 
     static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
@@ -232,19 +234,6 @@ public class PocoManager : MonoBehaviour
 
         vr_support.PeekCommand();
     }
-
-    void OnApplicationQuit()
-    {
-        // stop listening thread
-        stopListening();
-    }
-
-    void OnDestroy()
-    {
-        // stop listening thread
-        stopListening();
-    }
-
 }
 
 
