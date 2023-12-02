@@ -14,6 +14,8 @@ using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
+    public event Action<string> MessageReceived;
+
     public const int versionCode = 6;
     public int port = 5001;
     private bool mRunning;
@@ -50,6 +52,7 @@ public class PocoManager : MonoBehaviour
         rpc.addRpcMethod("Dump", Dump);
         rpc.addRpcMethod("GetDebugProfilingData", GetDebugProfilingData);
         rpc.addRpcMethod("SetText", SetText);
+        rpc.addRpcMethod("SendMessage", SendMessage);
 
         rpc.addRpcMethod("GetSDKVersion", GetSDKVersion);
 
@@ -174,6 +177,21 @@ public class PocoManager : MonoBehaviour
             }
         }
         return false;
+    }
+
+    [RPC]
+    private object SendMessage(List<object> param)
+    {
+        if (MessageReceived == null)
+        {
+            return false;
+        }
+
+        var textVal = param[0] as string;
+
+        MessageReceived.Invoke(textVal);
+
+        return true;
     }
 
     [RPC]
