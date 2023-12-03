@@ -59,7 +59,7 @@ public class PocoManager : MonoBehaviour
 
         rpc.addRpcMethod("GetSDKVersion", GetSDKVersion);
 
-        PopulatePocoListeners(rpc, pocoListenersBase);
+        PocoListenerUtils.SubscribePocoListeners(rpc, pocoListenersBase);
 
         mRunning = true;
 
@@ -94,30 +94,6 @@ public class PocoManager : MonoBehaviour
             Debug.LogError(string.Format("Unable to find an unused port from {0} to {1}", port, port + 5));
         }
         vr_support.ClearCommands();
-    }
-
-    static void PopulatePocoListeners(RPCParser rpc, PocoListenersBase listeners)
-    {
-        var methods = listeners.GetType()
-                               .GetMethods(BindingFlags.Public | BindingFlags.Instance);
-
-        var uniqueListeners = new HashSet<string>();
-
-        foreach (var method in methods)
-        {
-            var attribute = method.GetCustomAttribute<PocoMethodAttribute>();
-
-            if (attribute != null)
-            {
-                rpc.addListener(listeners, attribute.Name, method);
-
-                if (uniqueListeners.Add(attribute.Name) == false)
-                {
-                    Debug.LogError($"Attempt to add non-unique Poco listener: `{attribute.Name}`, " +
-                                   $"please check attributes of listeners at `{listeners.GetType().Name}`");
-                }
-            }
-        }
     }
 
     static void server_ClientConnected(object sender, TcpClientConnectedEventArgs e)
@@ -285,163 +261,47 @@ public class RPCParser
 
     public string HandleMessage(string json)
     {
-        Dictionary<string, object> data = JsonConvert.DeserializeObject<Dictionary<string, object>>(json, settings);
-        if (data.ContainsKey("method"))
+        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(json, settings);
+
+        if (data.TryGetValue("method", out var methodObj) == false)
         {
-            string method = data["method"].ToString();
-
-            if (method == "Invoke")
-            {
-                return HandleInvocation(Listeners, data);
-            }
-
-            List<object> param = null;
-            if (data.ContainsKey("params"))
-            {
-                param = ((JArray)(data["params"])).ToObject<List<object>>();
-            }
-
-            object idAction = null;
-            if (data.ContainsKey("id"))
-            {
-                // if it have id, it is a request
-                idAction = data["id"];
-            }
-
-            string response = null;
-            object result = null;
-            try
-            {
-                result = RPCHandler[method](param);
-            }
-            catch (Exception e)
-            {
-                // return error response
-                Debug.Log(e);
-                response = formatResponseError(idAction, null, e);
-                return response;
-            }
-
-            // return result response
-            response = formatResponse(idAction, result);
-            return response;
-
-        }
-        else
-        {
-            // do not handle response
             Debug.Log("ignore message without method");
             return null;
         }
-    }
 
-    // TODO: Make static to move to utils.
-    private string HandleInvocation(
-        Dictionary<string, (object instance, MethodInfo method)> listeners,
-        Dictionary<string, object> data)
-    {
-        if (listeners == null)
-        {
-            throw new ArgumentNullException(
-                nameof(listeners),
-                "To use `poco.invoke()`, please assign object " +
-                $"of class derived from {nameof(PocoListenersBase)} " +
-                $"to field at `{nameof(PocoManager)}`");
-        }
-
-        if (data.TryGetValue("id", out var idAction) == false)
-        {
-            return null;
-        }
+        var method = methodObj.ToString();
+        var idAction = data.TryGetValue("id", out var id) ? id : null;
 
         try
         {
-            var paramsObject = (JObject)data["params"];
+            object result;
 
-            var listener = paramsObject["listener"].ToObject<string>();
-
-            if (listeners.TryGetValue(listener, out var listenerPair) == false)
+            switch (method)
             {
-                throw new NotImplementedException(
-                    $"Listener method for `{listener}` " +
-                    $"marked with `{nameof(PocoMethodAttribute)}` was not found " +
-                    $"at `{listeners.GetType().Name}`");
+                case "Invoke":
+                    result = PocoListenerUtils.HandleInvocation(Listeners, data);
+                    break;
+
+                default:
+                    List<object> param = null;
+
+                    if (data.TryGetValue("params", out var value))
+                    {
+                        param = ((JArray)value).ToObject<List<object>>();
+                    }
+
+                    result = RPCHandler[method](param);
+
+                    break;
             }
-
-            var (instance, method) = listenerPair;
-
-            var args = GetInvocationArgs(paramsObject, method);
-
-            var result = method.Invoke(instance, args);
 
             return formatResponse(idAction, result);
         }
         catch (Exception exception)
         {
-            Debug.Log(exception);
+            Debug.LogError(exception);
             return formatResponseError(idAction, null, exception);
         }
-    }
-
-    private static object[] GetInvocationArgs(JObject paramsObject, MethodInfo method)
-    {
-        var parameters = method.GetParameters();
-
-        if (paramsObject.TryGetValue("data", out var data) == false)
-        {
-            if (parameters.Length > 0)
-            {
-                throw new ArgumentException(
-                    $"Signature mismatch of method `{method}`: " +
-                    "expected 0 arguments in listener, " +
-                    $"received {parameters.Length} arguments");
-            }
-
-            return Array.Empty<object>();
-        }
-
-        var args = new List<object>();
-
-        var remainingArgNames = new HashSet<string>(data.ToObject<Dictionary<string, object>>().Keys);
-
-        foreach (var parameter in parameters)
-        {
-            var parameterName = parameter.Name;
-
-            var argToken = data[parameterName];
-
-            if (argToken == null)
-            {
-                throw new ArgumentException(
-                    $"Signature mismatch of method `{method}`: " +
-                    $"excess parameter `{parameterName}` in listener");
-            }
-
-            try
-            {
-                var argValue = argToken.ToObject(parameter.ParameterType);
-                args.Add(argValue);
-                remainingArgNames.Remove(parameterName);
-            }
-            catch (JsonReaderException exception)
-            {
-                throw new ArgumentException(
-                    $"Signature mismatch of method `{method}`: " +
-                    $"parameter `{parameterName}` type mismatch: " +
-                    $"tried to parse received value `{argToken}`, " +
-                    $"with type `{parameter.ParameterType.Name}` at listener",
-                    exception);
-            }
-        }
-
-        if (remainingArgNames.Count > 0)
-        {
-            throw new ArgumentException(
-                $"Signature mismatch of method `{method}`: " +
-                $"missing parameters in listener: `{string.Join(", ", remainingArgNames)}`");
-        }
-
-        return args.ToArray();
     }
 
     // Call a method in the server
