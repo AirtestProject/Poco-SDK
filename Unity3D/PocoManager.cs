@@ -4,20 +4,25 @@ using Poco;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Net.Sockets;
+using System.Reflection;
 using TcpServer;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 public class PocoManager : MonoBehaviour
 {
+    public event Action<string> MessageReceived;
+
     public const int versionCode = 6;
     public int port = 5001;
     private bool mRunning;
     public AsyncTcpServer server = null;
+    public PocoListenersBase pocoListenersBase;
     private RPCParser rpc = null;
     private SimpleProtocolFilter prot = null;
     private UnityDumper dumper = new UnityDumper();
@@ -50,8 +55,11 @@ public class PocoManager : MonoBehaviour
         rpc.addRpcMethod("Dump", Dump);
         rpc.addRpcMethod("GetDebugProfilingData", GetDebugProfilingData);
         rpc.addRpcMethod("SetText", SetText);
+        rpc.addRpcMethod("SendMessage", SendMessage);
 
         rpc.addRpcMethod("GetSDKVersion", GetSDKVersion);
+
+        PocoListenerUtils.SubscribePocoListeners(rpc, pocoListenersBase);
 
         mRunning = true;
 
@@ -177,6 +185,21 @@ public class PocoManager : MonoBehaviour
     }
 
     [RPC]
+    private object SendMessage(List<object> param)
+    {
+        if (MessageReceived == null)
+        {
+            return false;
+        }
+
+        var textVal = param[0] as string;
+
+        MessageReceived.Invoke(textVal);
+
+        return true;
+    }
+
+    [RPC]
     private object GetSDKVersion(List<object> param)
     {
         return versionCode;
@@ -229,6 +252,8 @@ public class RPCParser
     public delegate object RpcMethod(List<object> param);
 
     protected Dictionary<string, RpcMethod> RPCHandler = new Dictionary<string, RpcMethod>();
+    protected Dictionary<string, (object instance, MethodInfo method)> Listeners = new Dictionary<string, (object, MethodInfo)>();
+
     private JsonSerializerSettings settings = new JsonSerializerSettings()
     {
         StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
@@ -236,47 +261,46 @@ public class RPCParser
 
     public string HandleMessage(string json)
     {
-        Dictionary<string, object> data = JsonConvert.DeserializeObject<Dictionary<string, object>>(json, settings);
-        if (data.ContainsKey("method"))
+        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(json, settings);
+
+        if (data.TryGetValue("method", out var methodObj) == false)
         {
-            string method = data["method"].ToString();
-            List<object> param = null;
-            if (data.ContainsKey("params"))
-            {
-                param = ((JArray)(data["params"])).ToObject<List<object>>();
-            }
-
-            object idAction = null;
-            if (data.ContainsKey("id"))
-            {
-                // if it have id, it is a request
-                idAction = data["id"];
-            }
-
-            string response = null;
-            object result = null;
-            try
-            {
-                result = RPCHandler[method](param);
-            }
-            catch (Exception e)
-            {
-                // return error response
-                Debug.Log(e);
-                response = formatResponseError(idAction, null, e);
-                return response;
-            }
-
-            // return result response
-            response = formatResponse(idAction, result);
-            return response;
-
-        }
-        else
-        {
-            // do not handle response
             Debug.Log("ignore message without method");
             return null;
+        }
+
+        var method = methodObj.ToString();
+        var idAction = data.TryGetValue("id", out var id) ? id : null;
+
+        try
+        {
+            object result;
+
+            switch (method)
+            {
+                case "Invoke":
+                    result = PocoListenerUtils.HandleInvocation(Listeners, data);
+                    break;
+
+                default:
+                    List<object> param = null;
+
+                    if (data.TryGetValue("params", out var value))
+                    {
+                        param = ((JArray)value).ToObject<List<object>>();
+                    }
+
+                    result = RPCHandler[method](param);
+
+                    break;
+            }
+
+            return formatResponse(idAction, result);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError(exception);
+            return formatResponseError(idAction, null, exception);
         }
     }
 
@@ -331,5 +355,10 @@ public class RPCParser
     public void addRpcMethod(string name, RpcMethod method)
     {
         RPCHandler[name] = method;
+    }
+
+    public void addListener(object instance, string name, MethodInfo method)
+    {
+        Listeners[name] = (instance, method);
     }
 }
