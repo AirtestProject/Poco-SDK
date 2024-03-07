@@ -31,7 +31,7 @@ namespace Poco
 
 					Roots.Add((AbstractNode*)Root);
 
-					return;
+					//return;
 				}
 			}
 		}
