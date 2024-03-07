@@ -11,6 +11,7 @@
 #include "Components/TextWidgetTypes.h"
 #include "UObject/UObjectBase.h"
 #include "UObject/UObjectIterator.h"
+#include "Components/TileView.h"
 
 namespace Poco
 {
@@ -74,6 +75,16 @@ namespace Poco
 
 		if (Widget)
 		{
+			if (UTileView* tileView = Cast<UTileView>(Widget))
+			{
+				for (UUserWidget* entryWidget : tileView->GetDisplayedEntryWidgets())
+				{
+					AbstractNode* ChildNode = new UE4Node(entryWidget);
+					Children.Add(ChildNode);
+				}
+				return Children;
+			}
+
 			TArray<UWidget*> Widgets;
 
 			if (UUserWidget* UserWidget = Cast<UUserWidget>(Widget))
