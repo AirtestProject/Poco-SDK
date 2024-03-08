@@ -59,7 +59,10 @@ public class PocoManager : MonoBehaviour
 
         rpc.addRpcMethod("GetSDKVersion", GetSDKVersion);
 
-        PocoListenerUtils.SubscribePocoListeners(rpc, pocoListenersBase);
+        if (pocoListenersBase != null)
+        {
+            PocoListenerUtils.SubscribePocoListeners(rpc, pocoListenersBase);
+        }
 
         mRunning = true;
 
