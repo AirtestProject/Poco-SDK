@@ -48,8 +48,7 @@ AbstractNode.prototype.enumerateAttrs = function () {
     // :rettype: Iterable<string, ValueType>
     var ret = {}
     var allAttrNames = this.getAvailableAttributeNames()
-    for (var i in allAttrNames) {
-        var attrName = allAttrNames[i]
+    for (var attrName of allAttrNames) {
         var attrVal = this.getAttr(attrName)
         if (attrVal !== undefined) {
             ret[attrName] = attrVal
