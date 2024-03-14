@@ -5,7 +5,7 @@ using UnityEngine;
 using TMPro;
 
 
-namespace Poco
+namespace Poco.UGUI
 {
     public class UnityNode : AbstractNode
     {
