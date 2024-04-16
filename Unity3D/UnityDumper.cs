@@ -1,29 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace Poco
 {
     public class UnityDumper : AbstractDumper
     {
+        private readonly UnityNodeProvider nodeProvider;
+
+        public UnityDumper(UnityNodeProvider nodeProvider)
+        {
+            this.nodeProvider = nodeProvider;
+        }
+        
         public override AbstractNode getRoot()
         {
-            return new RootNode();
+            return nodeProvider ? new RootNode(nodeProvider) : null;
         }
     }
 
     public class RootNode : AbstractNode
     {
-        private List<AbstractNode> children = null;
+        private readonly List<AbstractNode> children = new List<AbstractNode>();
 
-        public RootNode()
+        public RootNode(UnityNodeProvider nodeProvider)
         {
-            children = new List<AbstractNode>();
-            foreach (GameObject obj in Transform.FindObjectsOfType(typeof(GameObject)))
+            foreach (GameObject obj in Object.FindObjectsOfType(typeof(GameObject)))
             {
                 if (obj.transform.parent == null)
                 {
-                    children.Add(new UnityNode(obj));
+                    children.Add(nodeProvider.CreateNode(obj));
                 }
             }
         }

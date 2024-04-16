@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using UnityEngine;
 
 
-namespace Poco
+namespace Poco.NGUI
 {
     public class UnityNode : AbstractNode
     {
