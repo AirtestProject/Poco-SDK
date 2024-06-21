@@ -12,6 +12,7 @@
 #include "UObject/UObjectBase.h"
 #include "UObject/UObjectIterator.h"
 #include "Components/TileView.h"
+#include "Engine/GameEngine.h"
 
 namespace Poco
 {
@@ -166,7 +167,7 @@ namespace Poco
 		}
 		else if (AttrName.Equals(TEXT("size"), ESearchCase::IgnoreCase))
 		{
-		
+
 			return GetSize(OutArray);
 		}
 		else if (AttrName.Equals(TEXT("scale"), ESearchCase::IgnoreCase))
@@ -301,7 +302,7 @@ namespace Poco
 			return false;
 		}
 
-		// Gets the last geometry used to Tick the widget. 
+		// Gets the last geometry used to Tick the widget.
 		// This data may not exist yet if this call happens prior to the widget having been ticked/painted, or it may be out of date, or a frame behind.
 		const FGeometry Geometry = Widget->GetCachedGeometry();
 
@@ -314,19 +315,25 @@ namespace Poco
 		// Like if you wanted to add another widget to the viewport at the same position in viewport space as this location, this is what you would use.
 		FVector2D PositionInViewport;
 
-		USlateBlueprintLibrary::AbsoluteToViewport(Widget->GetWorld(), Position, PositionOnScreen, PositionInViewport);
+		UGameEngine* gameEngine = Cast<UGameEngine>(GEngine);
+		UWorld* GameWorld = NULL;
+		if (IsValid(gameEngine))
+		{
+			GameWorld = gameEngine->GetGameWorld();
+		}
+
+		USlateBlueprintLibrary::AbsoluteToViewport(GameWorld, Position, PositionOnScreen, PositionInViewport);
 
 		// Returns a percentage based on compatibility considerations.
 		FVector2D Size = Geometry.GetAbsoluteSize();
 		FVector2D Center = PositionOnScreen + 0.5f * Size;
-		const FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(Widget->GetWorld());
+		const FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(GameWorld);
 		FVector2D Percentage = Center / ViewportSize;
 
 		PositionJson.Add(MakeShareable(new FJsonValueNumber(Percentage.X)));
 		PositionJson.Add(MakeShareable(new FJsonValueNumber(Percentage.Y)));
-
 		OutArray = &PositionJson;
-		
+
 		return true;
 	}
 
@@ -337,10 +344,18 @@ namespace Poco
 			return false;
 		}
 
+		UGameEngine* gameEngine = Cast<UGameEngine>(GEngine);
+		UWorld* GameWorld = NULL;
+		if (IsValid(gameEngine))
+		{
+			GameWorld = gameEngine->GetGameWorld();
+		}
+
 		FGeometry Geometry = Widget->GetCachedGeometry();
 
 		FVector2D AbsoluteSize = Geometry.GetAbsoluteSize();
-		FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(Widget->GetWorld());
+		FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(GameWorld);
+
 		FVector2D SizePercentage = AbsoluteSize / ViewportSize;
 
 		SizeJson.Add(MakeShareable(new FJsonValueNumber(SizePercentage.X)));
@@ -358,7 +373,14 @@ namespace Poco
 			return false;
 		}
 
-		float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(Widget->GetWorld());
+		UGameEngine* gameEngine = Cast<UGameEngine>(GEngine);
+		UWorld* GameWorld = NULL;
+		if (IsValid(gameEngine))
+		{
+			GameWorld = gameEngine->GetGameWorld();
+		}
+
+		float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(GameWorld);
 
 		ScaleJson.Add(MakeShareable(new FJsonValueNumber(ViewportScale)));
 		ScaleJson.Add(MakeShareable(new FJsonValueNumber(ViewportScale)));

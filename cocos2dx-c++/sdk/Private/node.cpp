@@ -196,7 +196,7 @@ void NeteaseNode::getChildren(Writer<StringBuffer>& writer){
 
 			writer.EndObject();
 		}
-#endif // 
+#endif //
 		writer.EndArray();
 	}
 }
@@ -240,7 +240,7 @@ void NeteaseNode::getPayload(string nodeName, int nodeType, Writer<StringBuffer>
 	else {
 		writer.Double(_node->getRotationX());
 	}
-	
+
 	writer.Key("tag");
 	writer.Int(_node->getTag());
 	CCLOG("tag: %d", _node->getTag());
@@ -453,7 +453,7 @@ int NeteaseNode::getNodeType() {
 	return nodeType;
 }
 
-string NeteaseNode::getNodeTypeStr(int nodeType) 
+string NeteaseNode::getNodeTypeStr(int nodeType)
 {
 	switch (nodeType) {
 	case -1:
