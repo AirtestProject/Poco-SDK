@@ -402,16 +402,35 @@ Node.prototype.getAttr = function (attrName) {
         // eui.* 类型的UI，以中心点为锚点，其余类型取默认pos点
         var x = 0;
         var y = 0;
+        // 兼容node转换为global坐标失败的情况
+        var gx = 0;
+        var gy = 0;
         var point = this.node.localToGlobal();
+        if (point.x === point.x && point.y === point.y) {
+            gx = point.x;
+            gy = point.y;
+        } else {
+            gx = this.node.x;
+            gy = this.node.y;
+        }
         if (this.node.__class__.toString().startsWith("eui")) {
-            var w = this.node.width;
-            var h = this.node.height;
-            x = (point.x + w / 2) / this.screenWidth;
-            y = (point.y + h / 2) / this.screenHeight;
+            // 兼容node读不到width、height的情况
+            var w = 0;
+            var h = 0;
+            if (this.node.width === this.node.width && this.node.height === this.node.height) {
+                w = this.node.width;
+                h = this.node.height;
+            } else {
+                w = this.node.stage.stageWidth;
+                h = this.node.stage.stageHeight;
+            }
+
+            x = (gx + w / 2) / this.screenWidth;
+            y = (gy + h / 2) / this.screenHeight;
         }
         else {
-            x = point.x / this.screenWidth;
-            y = point.y / this.screenHeight;
+            x = gx / this.screenWidth;
+            y = gy / this.screenHeight;
         }
         return [x, y];
     }
@@ -419,8 +438,16 @@ Node.prototype.getAttr = function (attrName) {
         // 转换成归一化坐标系
         var width = 0;
         var height = 0;
-        width = this.node.width;
-        height = this.node.height;
+
+        // 兼容node读不到width、height的情况
+        if (this.node.width === this.node.width && this.node.height === this.node.height) {
+            width = this.node.width;
+            height = this.node.height;
+        } else {
+            width = this.node.stage.stageWidth;
+            height = this.node.stage.stageHeight;
+        }
+
         width /= this.screenWidth;
         height /= this.screenHeight;
         // console.log([width, height],"    ",this.node.__class__,this.node.width,this.screenWidth)
@@ -523,7 +550,9 @@ var Dumper = function (root) {
 };
 Dumper.prototype = Object.create(AbstractDumper.prototype);
 Dumper.prototype.getRoot = function () {
-    return new Node(this.root, this.root.width, this.root.height);
+    // root节点读取的长宽消息从width\height改为stageWidth\stageHeight
+    return new Node(this.root, this.root.stageWidth, this.root.stageHeight);
+    // return new Node(this.root, this.root.width, this.root.height);
 };
 try {
     module.exports = Dumper;
