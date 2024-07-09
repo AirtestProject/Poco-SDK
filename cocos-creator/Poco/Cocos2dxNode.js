@@ -46,8 +46,7 @@ Node.prototype.getChildren = function () {
     var nodeChildren = cgetter(this.node, 'children')
     if (nodeChildren) {
         children = []
-        for (var i in nodeChildren) {
-            var child = nodeChildren[i]
+        for (let child of nodeChildren) {
             children.push(new Node(child, this.screenWidth, this.screenHeight))
         }
     }
@@ -84,8 +83,7 @@ Node.prototype.getAttr = function (attrName) {
         return cgetter(this.node, 'name') || '<no-name>'
     }
     else if (attrName === 'text') {
-        for (var i in this.node._components) {
-            var c = this.node._components[i]
+        for (var c of this.node._components) {
             if (c.string !== undefined) {
                 return c.string
             }

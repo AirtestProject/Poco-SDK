@@ -34,8 +34,7 @@ Selector.prototype.selectImpl = function (cond, multiple, root, maxDepth, onlyVi
     
     if (op === '>' || op === '/') {
         var parents = [root]
-        for (var index in args) {
-            index = parseInt(index)
+        for(let index = 0;index < arg.length; index++) {
             var arg = args[index]
             var midResult = []
             for (var j in parents) {
@@ -59,8 +58,7 @@ Selector.prototype.selectImpl = function (cond, multiple, root, maxDepth, onlyVi
         var query1 = args[0]
         var query2 = args[1]
         var result1 = this.selectImpl(query1, multiple, root, maxDepth, onlyVisibleNode, includeRoot)
-        for (var index in result1) {
-            var n = result1[index]
+        for (var n of result1) {
             var sibling_result = this.selectImpl(query2, multiple, n.getParent(), 1, onlyVisibleNode, includeRoot)
             for (var k in sibling_result) {
                 if (result.indexOf(sibling_result[k]) < 0) {
@@ -118,8 +116,7 @@ Selector.prototype._selectTraverse = function (cond, node, outResult, multiple, 
     maxDepth -= 1
 
     var children = node.getChildren()
-    for (var i in node.getChildren()) {
-        var child = children[i]
+    for (var child of children) {
         var finished = this._selectTraverse(cond, child, outResult, multiple, maxDepth, onlyVisibleNode, true)
         if (finished) {
             return true

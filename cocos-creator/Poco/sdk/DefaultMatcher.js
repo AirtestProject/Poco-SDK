@@ -39,8 +39,7 @@ DefaultMatcher.prototype.match = function (cond, node) {
 
     // 条件匹配
     if (op === 'and') {
-        for (var i in args) {
-            var arg = args[i]
+        for (var arg of args) {
             if (!this.match(arg, node)) {
                 return false
             }
@@ -49,8 +48,7 @@ DefaultMatcher.prototype.match = function (cond, node) {
     }
 
     if (op === 'or') {
-        for (var i in args) {
-            var arg = args[i]
+        for (var arg of args) {
             if (this.match(arg, node)) {
                 return true
             }
