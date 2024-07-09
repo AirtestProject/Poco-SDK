@@ -13,6 +13,7 @@ using System.Reflection;
 using TcpServer;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
+using System.Collections;
 
 public class PocoManager : MonoBehaviour
 {
@@ -27,6 +28,7 @@ public class PocoManager : MonoBehaviour
     private SimpleProtocolFilter prot = null;
     private UnityDumper dumper = new UnityDumper();
     private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
+    protected ConcurrentDictionary<string, ClientDumpHelp> clientDumpHelpDic = new ConcurrentDictionary<string, ClientDumpHelp>();
     private VRSupport vr_support = new VRSupport();
     private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
         { "dump", 0 },
@@ -123,6 +125,7 @@ public class PocoManager : MonoBehaviour
         });
     }
 
+    //废弃
     [RPC]
     private object Dump(List<object> param)
     {
@@ -218,22 +221,153 @@ public class PocoManager : MonoBehaviour
                 var sw = new Stopwatch();
                 sw.Start();
                 var t0 = sw.ElapsedMilliseconds;
-                string response = rpc.HandleMessage(msg);
-                var t1 = sw.ElapsedMilliseconds;
-                byte[] bytes = prot.pack(response);
-                var t2 = sw.ElapsedMilliseconds;
-                server.Send(client.TcpClient, bytes);
-                var t3 = sw.ElapsedMilliseconds;
-                debugProfilingData["handleRpcRequest"] = t1 - t0;
-                debugProfilingData["packRpcResponse"] = t2 - t1;
-                TcpClientState internalClientToBeThrowAway;
-                string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString();
-                inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);
+                string response = HandleMessage(msg, client);
+                if (string.IsNullOrEmpty(response)) return;
+                ProcessAndSendResponse(client, response, sw, t0);
             });
         }
-
         vr_support.PeekCommand();
+        foreach (ClientDumpHelp cdh in clientDumpHelpDic.Values)
+        {
+            if (cdh.requestDump && cdh.dumpCanSendFlag)
+            {
+                cdh.requestDump = false;
+                Thread thread = new Thread(new ParameterizedThreadStart(HandleDumpMessage));
+                thread.Start(cdh);
+            }
+        }
     }
+
+    public string HandleMessage(string json, TcpClientState client)
+    {
+        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(json, rpc.settings);
+        if (data.TryGetValue("method", out var methodObj) == false)
+        {
+            Debug.Log("ignore message without method");
+            return null;
+        }
+        var method = methodObj.ToString();
+        var idAction = data.TryGetValue("id", out var id) ? id : null;
+        List<object> param = null;
+        if (data.TryGetValue("params", out var value))
+        {
+            param = ((JArray)value).ToObject<List<object>>();
+        }
+        try
+        {
+            object result = null;
+            switch (method)
+            {
+                case "Invoke":
+                    result = PocoListenerUtils.HandleInvocation(rpc.Listeners, data);
+                    break;
+                case "Dump":
+                    ClientDumpHelp cdh = new ClientDumpHelp(client, true, param, idAction, true, false);
+                    clientDumpHelpDic.TryAdd(cdh.tcpClientKey, cdh);
+                    IEnumerator enumerator = DumpHierarchyCoroutine(cdh);
+                    StartCoroutine(enumerator);
+                    break;
+                default:
+                    result = rpc.RPCHandler[method](param);
+                    break;
+            }
+            if (result == null) return string.Empty;
+            return rpc.formatResponse(idAction, result);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError(exception);
+            return rpc.formatResponseError(idAction, null, exception);
+        }
+    }
+
+    protected void HandleDumpMessage(object _cdh)
+    {
+        ClientDumpHelp cdh = (ClientDumpHelp)_cdh;
+        var sw = new Stopwatch();
+        sw.Start();
+        long t0 = sw.ElapsedMilliseconds;
+        string response = "";
+        try
+        {
+            response = rpc.formatResponse(cdh.dumpIdAction, cdh.rootResult);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError(exception);
+            response = rpc.formatResponseError(cdh.dumpIdAction, null, exception);
+        }
+        ProcessAndSendResponse(cdh.tcs, response, sw, t0);
+        ClientDumpHelp tcdh;
+        clientDumpHelpDic.TryRemove(cdh.tcpClientKey, out tcdh);
+        tcdh = null;
+    }
+
+    protected IEnumerator DumpHierarchyCoroutine(ClientDumpHelp cdh)
+    {
+        var param = cdh.dumpParams;
+        var rootResult = cdh.rootResult;
+        var rootNode = dumper.getRoot();
+        var onlyVisibleNode = true;
+        rootResult.Clear();
+        if (param.Count > 0)
+        {
+            onlyVisibleNode = (bool)param[0];
+        }
+        if (rootNode == null)
+        {
+            yield break;
+        }
+        Stack<(AbstractNode node, Dictionary<string, object> result)> stack = new Stack<(AbstractNode, Dictionary<string, object>)>();
+        stack.Push((rootNode, rootResult));
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        while (stack.Count > 0)
+        {
+            var (currentNode, currentResult) = stack.Pop();
+            Dictionary<string, object> payload = currentNode.enumerateAttrs();
+            string name = (string)currentNode.getAttr("name");
+            currentResult.Add("name", name);
+            currentResult.Add("payload", payload);
+            List<object> children = new List<object>();
+            foreach (AbstractNode child in currentNode.getChildren())
+            {
+                if (stopwatch.ElapsedMilliseconds > 16f)
+                {
+                    stopwatch.Restart();
+                    yield return null;
+                }
+                if (!onlyVisibleNode || (bool)child.getAttr("visible"))
+                {
+                    Dictionary<string, object> childResult = new Dictionary<string, object>();
+                    children.Add(childResult);
+                    stack.Push((child, childResult));
+                }
+            }
+            if (children.Count > 0)
+            {
+                currentResult.Add("children", children);
+            }
+        }
+        cdh.dumpRunningFlag = false;
+        cdh.dumpCanSendFlag = true;
+    }
+
+    protected void ProcessAndSendResponse(TcpClientState client, string response, Stopwatch sw, long t0)
+    {
+        var t1 = sw.ElapsedMilliseconds;
+        byte[] bytes = prot.pack(response);
+        var t2 = sw.ElapsedMilliseconds;
+        server.Send(client.TcpClient, bytes);
+        var t3 = sw.ElapsedMilliseconds;
+        debugProfilingData["handleRpcRequest"] = t1 - t0;
+        debugProfilingData["packRpcResponse"] = t2 - t1;
+        TcpClientState internalClientToBeThrowAway;
+        string tcpClientKey = client.TcpClient.Client.RemoteEndPoint.ToString();
+        inbox.TryRemove(tcpClientKey, out internalClientToBeThrowAway);
+    }
+
 
     void OnApplicationQuit()
     {
@@ -254,58 +388,13 @@ public class RPCParser
 {
     public delegate object RpcMethod(List<object> param);
 
-    protected Dictionary<string, RpcMethod> RPCHandler = new Dictionary<string, RpcMethod>();
-    protected Dictionary<string, (object instance, MethodInfo method)> Listeners = new Dictionary<string, (object, MethodInfo)>();
+    public Dictionary<string, RpcMethod> RPCHandler = new Dictionary<string, RpcMethod>();
+    public Dictionary<string, (object instance, MethodInfo method)> Listeners = new Dictionary<string, (object, MethodInfo)>();
 
-    private JsonSerializerSettings settings = new JsonSerializerSettings()
+    public JsonSerializerSettings settings = new JsonSerializerSettings()
     {
         StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
     };
-
-    public string HandleMessage(string json)
-    {
-        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(json, settings);
-
-        if (data.TryGetValue("method", out var methodObj) == false)
-        {
-            Debug.Log("ignore message without method");
-            return null;
-        }
-
-        var method = methodObj.ToString();
-        var idAction = data.TryGetValue("id", out var id) ? id : null;
-
-        try
-        {
-            object result;
-
-            switch (method)
-            {
-                case "Invoke":
-                    result = PocoListenerUtils.HandleInvocation(Listeners, data);
-                    break;
-
-                default:
-                    List<object> param = null;
-
-                    if (data.TryGetValue("params", out var value))
-                    {
-                        param = ((JArray)value).ToObject<List<object>>();
-                    }
-
-                    result = RPCHandler[method](param);
-
-                    break;
-            }
-
-            return formatResponse(idAction, result);
-        }
-        catch (Exception exception)
-        {
-            Debug.LogError(exception);
-            return formatResponseError(idAction, null, exception);
-        }
-    }
 
     // Call a method in the server
     public string formatRequest(string method, object idAction, List<object> param = null)
@@ -365,3 +454,30 @@ public class RPCParser
         Listeners[name] = (instance, method);
     }
 }
+
+
+
+
+public class ClientDumpHelp
+{
+    public bool requestDump;
+    public bool dumpRunningFlag;
+    public bool dumpCanSendFlag;
+    public object dumpIdAction;
+    public List<object> dumpParams;
+    public string tcpClientKey;
+    public Dictionary<string, object> rootResult = new Dictionary<string, object>();
+    public TcpClientState tcs;
+
+    public ClientDumpHelp(TcpClientState _tcs, bool _requestDump, List<object> param, object idAction, bool _dumpRunningFlag, bool _dumpCanSendFlag)
+    {
+        tcs = _tcs;
+        requestDump = _requestDump;
+        dumpParams = param;
+        tcpClientKey = tcs.TcpClient.Client.RemoteEndPoint.ToString();
+        dumpIdAction = idAction;
+        dumpRunningFlag = _dumpRunningFlag;
+        dumpCanSendFlag = _dumpCanSendFlag;
+    }
+}
+
