@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
-using TMPro;
 
 
-namespace Poco
+namespace Poco.UGUIWithTMPro
 {
     public class UnityNode : AbstractNode
     {
@@ -215,16 +214,18 @@ namespace Poco
         
         private string GameObjectText()
         {
-            TMP_Text tmpText = gameObject.GetComponent<TMP_Text>();
+#if UNITY_2018_1_OR_NEWER
+            var tmpText = gameObject.GetComponent<TMPro.TMP_Text>();
             if (tmpText)
             {
                 return tmpText.GetParsedText();
             }
-            TextMeshProUGUI tmpUIText = gameObject.GetComponent<TextMeshProUGUI>();
+            var tmpUIText = gameObject.GetComponent<TMPro.TextMeshProUGUI>();
             if (tmpUIText)
             {
                 return tmpUIText.GetParsedText();
             }
+#endif
             Text text = gameObject.GetComponent<Text>();
             return text ? text.text : null;
 		}

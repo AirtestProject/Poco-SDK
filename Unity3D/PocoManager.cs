@@ -19,13 +19,14 @@ public class PocoManager : MonoBehaviour
     public event Action<string> MessageReceived;
 
     public const int versionCode = 6;
+    [SerializeField] private UnityNodeProvider nodeProvider;
     public int port = 5001;
     private bool mRunning;
     public AsyncTcpServer server = null;
     public PocoListenersBase pocoListenersBase;
     private RPCParser rpc = null;
     private SimpleProtocolFilter prot = null;
-    private UnityDumper dumper = new UnityDumper();
+    private UnityDumper dumper = null;
     private ConcurrentDictionary<string, TcpClientState> inbox = new ConcurrentDictionary<string, TcpClientState>();
     private VRSupport vr_support = new VRSupport();
     private Dictionary<string, long> debugProfilingData = new Dictionary<string, long>() {
@@ -40,10 +41,36 @@ public class PocoManager : MonoBehaviour
     {
     }
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!nodeProvider)
+        {
+            UnityNodeProvider otherNodeProvider = null;
+            foreach (var nodeFactoryAssetGuid in UnityEditor.AssetDatabase.FindAssets("t:UnityNodeProvider"))
+            {
+                var nodeFactoryAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(nodeFactoryAssetGuid);
+                otherNodeProvider = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityNodeProvider>(nodeFactoryAssetPath);
+                if (otherNodeProvider) break;
+            }
+
+            if (otherNodeProvider)
+            {
+                nodeProvider = otherNodeProvider;
+            }
+            else
+            {
+                Debug.LogError("Failed to find UnityNodeProvider for Poco.");
+            }
+        }
+    }
+#endif
+
     void Awake()
     {
         Application.runInBackground = true;
         DontDestroyOnLoad(this);
+        dumper = new UnityDumper(nodeProvider);
         prot = new SimpleProtocolFilter();
         rpc = new RPCParser();
         rpc.addRpcMethod("isVRSupported", vr_support.isVRSupported);
@@ -181,7 +208,7 @@ public class PocoManager : MonoBehaviour
         {
             if (go.GetInstanceID() == instanceId)
             {
-                return UnityNode.SetText(go, textVal);
+                return nodeProvider.SetText(go, textVal);
             }
         }
         return false;
