@@ -1,4 +1,4 @@
-#if !UNITY_WSA
+#if !UNITY_5_6_OR_NEWER || NET_2_0 || NET_2_0_SUBSET
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Threading;
 
-namespace TcpServer
+namespace System.Collections.Concurrent
 {
 
     /// <summary>
