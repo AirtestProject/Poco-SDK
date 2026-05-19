@@ -464,9 +464,9 @@ namespace Poco
             }
 
             Renderer render = gameObject.GetComponent<Renderer>();
-            if (renderer != null && renderer.material != null)
+            if (render != null && render.material != null && render.material.HasProperty("_Color"))
             {
-                return renderer.material.color.ToString();
+                return render.material.color.ToString();
             }
 
             return null;
